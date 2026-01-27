@@ -155,8 +155,15 @@ const SignupPage = () => {
         <div className={styles.container}>
             <div className={styles.wrapper}>
 
-                {/* Left Background (For switching to Signup) - Visible in Login Mode */}
-                <div className={styles.backgroundLayer}>
+                {/* Left Background (For switching to Signup) - Visible when we are in Login Mode (isSignup = false) */}
+                <div
+                    className={styles.backgroundLayer}
+                    style={{
+                        opacity: isSignup ? 0 : 1,
+                        pointerEvents: isSignup ? 'none' : 'all',
+                        transition: 'opacity 0.6s ease'
+                    }}
+                >
                     <h2>Don't have an account?</h2>
                     <p>Join us to create amazing visuals.</p>
                     <button className={styles.toggleButton} onClick={() => setIsSignup(true)}>
@@ -164,8 +171,15 @@ const SignupPage = () => {
                     </button>
                 </div>
 
-                {/* Right Background (For switching to Login) - Visible in Signup Mode */}
-                <div className={styles.backgroundLayer}>
+                {/* Right Background (For switching to Login) - Visible when we are in Signup Mode (isSignup = true) */}
+                <div
+                    className={styles.backgroundLayer}
+                    style={{
+                        opacity: isSignup ? 1 : 0,
+                        pointerEvents: isSignup ? 'all' : 'none',
+                        transition: 'opacity 0.6s ease'
+                    }}
+                >
                     <h2>Already have an account?</h2>
                     <p>Welcome back to ROMIMI.</p>
                     <button className={styles.toggleButton} onClick={() => setIsSignup(false)}>
