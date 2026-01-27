@@ -89,7 +89,10 @@ const SignupPage = () => {
     useEffect(() => {
         if (!overlayRef.current) return;
 
-        // Animate Swipe
+        // Mobile check (simple) - if window width < 768, don't animate left/right position if we change CSS to 100%
+        // But for now, let's keep animation logic generic or handled by CSS overrides if possible.
+        // Actually, for mobile we might force left:0 via CSS !important, so JS animation is ignored visually.
+
         if (isSignup) {
             animate(overlayRef.current, {
                 left: '0%',
@@ -104,22 +107,19 @@ const SignupPage = () => {
             });
         }
 
-        // Animate Inputs Entrance (Staggered)
+        // Animate Inputs Stagger
         setTimeout(() => {
             const inputs = overlayRef.current?.querySelectorAll(`.${styles.inputGroup}`);
             if (inputs) {
-                // Reset first
                 animate(inputs, {
                     opacity: 0,
                     translateY: 20,
                     duration: 0
                 });
-
-                // Animate In
                 animate(inputs, {
                     opacity: [0, 1],
                     translateY: [20, 0],
-                    delay: (el, i) => i * 100, // Stagger effect
+                    delay: (el, i) => i * 100,
                     easing: 'easeOutExpo'
                 });
             }
@@ -135,50 +135,45 @@ const SignupPage = () => {
         try {
             const response = await fetch(`${API_URL}/api/auth/register`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
-
             const data = await response.json();
-
             if (response.ok) {
-                setStatus({ type: 'success', message: 'Account created successfully! Please login.' });
+                setStatus({ type: 'success', message: 'Account created! Please login.' });
                 setFormData({ name: '', email: '', password: '' });
                 setTimeout(() => setIsSignup(false), 2000);
             } else {
                 setStatus({ type: 'error', message: data.message || 'Registration failed' });
             }
         } catch (error) {
-            setStatus({ type: 'error', message: 'Network error. Please try again.' });
+            setStatus({ type: 'error', message: 'Network error.' });
         }
     };
 
     return (
-        <div className={styles.wrapper}>
-            <div className={styles.card}>
+        <div className={styles.container}>
+            <div className={styles.wrapper}>
 
-                {/* Background Layer (Static Text) */}
-                <div className={styles.bgLayer}>
-                    {/* Left Side (For Signup Context) */}
-                    <div className={styles.leftPanel}>
-                        <h2>Already have an account?</h2>
-                        <button className={styles.ghostBtn} onClick={() => setIsSignup(false)}>
-                            Sign In
-                        </button>
-                    </div>
-
-                    {/* Right Side (For Login Context) */}
-                    <div className={styles.rightPanel}>
-                        <h2>New here?</h2>
-                        <button className={styles.ghostBtn} onClick={() => setIsSignup(true)}>
-                            Sign Up
-                        </button>
-                    </div>
+                {/* Left Background (For switching to Signup) - Visible in Login Mode */}
+                <div className={styles.backgroundLayer}>
+                    <h2>Don't have an account?</h2>
+                    <p>Join us to create amazing visuals.</p>
+                    <button className={styles.toggleButton} onClick={() => setIsSignup(true)}>
+                        Sign Up
+                    </button>
                 </div>
 
-                {/* Overlay Card (Slides Left/Right) */}
+                {/* Right Background (For switching to Login) - Visible in Signup Mode */}
+                <div className={styles.backgroundLayer}>
+                    <h2>Already have an account?</h2>
+                    <p>Welcome back to ROMIMI.</p>
+                    <button className={styles.toggleButton} onClick={() => setIsSignup(false)}>
+                        Sign In
+                    </button>
+                </div>
+
+                {/* Overlay Card (Slides) */}
                 <div className={styles.overlayCard} ref={overlayRef}>
                     <div className={styles.formContent}>
                         <h1>ROMIMI</h1>
@@ -186,43 +181,23 @@ const SignupPage = () => {
 
                         {isSignup ? (
                             <>
-                                <SnakeInput
-                                    label="Name"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                />
-                                <SnakeInput
-                                    label="Email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                />
-                                <SnakeInput
-                                    label="Password"
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleInputChange}
-                                />
-                                <button className={styles.actionBtn} onClick={handleSignup}>
-                                    Create Account
-                                </button>
+                                <SnakeInput name="name" label="Name" value={formData.name} onChange={handleInputChange} />
+                                <SnakeInput name="email" label="Email" value={formData.email} onChange={handleInputChange} />
+                                <SnakeInput name="password" label="Password" type="password" value={formData.password} onChange={handleInputChange} />
+                                <button className={styles.submitButton} onClick={handleSignup}>Create Account</button>
                             </>
                         ) : (
                             <>
                                 <SnakeInput label="Email" />
                                 <SnakeInput label="Password" type="password" />
-                                <button className={styles.actionBtn}>
-                                    Sign In
-                                </button>
+                                {/* Login logic explicitly untouched */}
+                                <button className={styles.submitButton}>Sign In</button>
                             </>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* Notification Snackbar */}
             <Snackbar
                 open={!!status}
                 autoHideDuration={6000}

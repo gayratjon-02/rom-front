@@ -227,3 +227,40 @@
     transform: scale(0.98);
   }
 }
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .wrapper {
+    width: 100%;
+    height: auto;
+    min-height: 500px;
+    background: transparent; /* Remove wrapper bg so we only see overlay */
+    box-shadow: none;
+  }
+  
+  /* Hide the side texts */
+  .backgroundLayer {
+    display: none;
+  }
+  
+  /* Make overlay take full space */
+  .overlayCard {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0 !important; /* Force left to 0 overriding inline style from animation */
+    position: relative;
+    border-radius: 16px;
+  }
+  
+  .formContent {
+    padding: 30px 20px;
+    
+    h1 {
+      font-size: 2.5rem;
+    }
+  }
+  
+  /* Adjust Animation reset for mobile? */
+  /* Since we force left:0 !important, the JS animation will run but do nothing visually, which is fine. */
+}
