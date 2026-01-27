@@ -53,6 +53,63 @@ const mockDAAnalysis: DAAnalysis = {
     color_palette: ["#F5F5F0", "#E8E4DF", "#D4C8BE", "#A69B8D", "#7A6F63"]
 };
 
+// Helper function to convert hex to approximate color name
+const hexToColorName = (hex: string): string => {
+    const colorNames: Record<string, string> = {
+        '#F5F5F0': 'Ivory',
+        '#E8E4DF': 'Linen',
+        '#D4C8BE': 'Soft Taupe',
+        '#A69B8D': 'Warm Gray',
+        '#7A6F63': 'Dark Taupe',
+        '#FFFFFF': 'White',
+        '#000000': 'Black',
+        '#F5F5DC': 'Beige',
+        '#87CEEB': 'Sky Blue',
+        '#90EE90': 'Light Green',
+        '#2C2C2C': 'Charcoal',
+        '#8B4513': 'Saddle Brown',
+        '#DAA520': 'Goldenrod',
+        '#0A0A0A': 'Near Black',
+        '#8B0000': 'Dark Red',
+        '#1A1A1A': 'Jet Black',
+        '#C41E3A': 'Cardinal Red',
+        '#808080': 'Gray',
+        '#FF6B6B': 'Coral Red',
+        '#4ECDC4': 'Turquoise',
+        '#2C3E50': 'Dark Slate',
+        '#A3B18A': 'Sage Green',
+        '#588157': 'Fern Green',
+        '#DAD7CD': 'Pale Silver',
+        '#3A5A40': 'Hunter Green',
+        '#722F37': 'Wine',
+        '#D4AF37': 'Metallic Gold',
+        '#1C1C1C': 'Eerie Black',
+        '#F8F8FF': 'Ghost White',
+        '#F5DEB3': 'Wheat',
+        '#DEB887': 'Burlywood',
+    };
+
+    // Check exact match first
+    const upperHex = hex.toUpperCase();
+    if (colorNames[upperHex]) {
+        return colorNames[upperHex];
+    }
+
+    // If no exact match, analyze the color
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+
+    const lightness = (r + g + b) / 3;
+
+    if (lightness > 240) return 'Off White';
+    if (lightness > 200) return 'Light Gray';
+    if (lightness > 150) return 'Medium Gray';
+    if (lightness > 100) return 'Dark Gray';
+    if (lightness > 50) return 'Charcoal';
+    return 'Near Black';
+};
+
 // Slide animation variants
 const slideVariants = {
     enter: (direction: number) => ({
@@ -658,10 +715,17 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                         key={idx}
                                                         className={styles.colorSwatch}
                                                         style={{ backgroundColor: color }}
-                                                        title={color}
+                                                        title={`${hexToColorName(color)} (${color})`}
                                                     />
                                                 ))}
                                             </div>
+                                            <input
+                                                type="text"
+                                                value={daAnalysis.color_palette.map(c => hexToColorName(c)).join(', ')}
+                                                readOnly
+                                                className={styles.colorNamesInput}
+                                                title="Color names based on palette"
+                                            />
                                         </div>
                                     </div>
                                 </div>
