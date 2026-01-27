@@ -130,14 +130,24 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             const analysisResponse = await analyzeProduct(product.id);
             const json = analysisResponse.analyzed_product_json;
 
+            // Helper to safe stringify logo fields
+            const getLogoDesc = (field: any): string => {
+                if (!field) return 'None';
+                if (typeof field === 'string') return field;
+                if (typeof field === 'object') {
+                    return field.description || field.desc || JSON.stringify(field);
+                }
+                return String(field);
+            };
+
             // 3. Map result to state
             const mappedAnalysis: ProductAnalysis = {
                 type: json.product_type || 'Unknown Product',
                 color: json.colors?.[0] || 'Unknown Color',
                 material: json.materials?.[0] || 'Unknown Material',
                 details: json.features?.join(', ') || '',
-                logo_front: (json as any).logo_front || 'None',
-                logo_back: (json as any).logo_back || 'None',
+                logo_front: getLogoDesc((json as any).logo_front),
+                logo_back: getLogoDesc((json as any).logo_back),
             };
 
             setProductAnalysis(mappedAnalysis);

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Check, AlertCircle } from 'lucide-react';
 import styles from '@/scss/styles/HomePage/HomeMiddle.module.scss';
 
 export interface ProductAnalysis {
@@ -121,24 +121,30 @@ const ProductStep2_Analysis: React.FC<ProductStep2Props> = ({
                 borderRadius: 12,
                 marginBottom: 32,
             }}>
-                {Object.entries(analysis).map(([key, value]) => (
-                    <div
-                        key={key}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '6px 12px',
-                            background: value ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                            borderRadius: 6,
-                            fontSize: 12,
-                            color: value ? 'var(--wizard-success)' : 'var(--wizard-error)',
-                        }}
-                    >
-                        <Check size={14} />
-                        {key.replace('_', ' ')}
-                    </div>
-                ))}
+                {Object.entries(analysis).map(([key, value]) => {
+                    const isUnknown = value?.toLowerCase().includes('unknown');
+                    const isValid = value && !isUnknown;
+
+                    return (
+                        <div
+                            key={key}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '6px 12px',
+                                background: isValid ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                borderRadius: 6,
+                                fontSize: 12,
+                                color: isValid ? 'var(--wizard-success)' : 'var(--wizard-error)',
+                                border: `1px solid ${isValid ? 'transparent' : 'rgba(239, 68, 68, 0.2)'}`
+                            }}
+                        >
+                            {isValid ? <Check size={14} /> : <AlertCircle size={14} />}
+                            {key.replace('_', ' ')}
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Action Bar */}
