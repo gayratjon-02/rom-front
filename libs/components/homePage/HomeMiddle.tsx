@@ -130,24 +130,67 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             const analysisResponse = await analyzeProduct(product.id);
             const json = analysisResponse.analyzed_product_json;
 
-            // Helper to safe stringify logo fields
+            // Helper to safely extract logo description from various formats
             const getLogoDesc = (field: any): string => {
+                // Handle null/undefined
                 if (!field) return 'None';
+
+                // Handle plain string
                 if (typeof field === 'string') return field;
-                if (typeof field === 'object') {
-                    return field.description || field.desc || JSON.stringify(field);
+
+                // Handle object with logo details { type, color, position, size }
+                if (typeof field === 'object' && field !== null) {
+                    const parts: string[] = [];
+
+                    if (field.type) parts.push(field.type);
+                    if (field.color && field.color.toLowerCase() !== 'unknown') {
+                        parts.push(`(${field.color})`);
+                    }
+                    if (field.position) parts.push(`at ${field.position}`);
+
+                    // If we built a description, return it
+                    if (parts.length > 0) return parts.join(' ');
+
+                    // Fallback to description/desc fields
+                    if (field.description) return field.description;
+                    if (field.desc) return field.desc;
+
+                    // Last resort: clean stringify
+                    try {
+                        return JSON.stringify(field, null, 0)
+                            .replace(/[{}"]/g, '')
+                            .replace(/,/g, ', ');
+                    } catch {
+                        return 'Invalid logo data';
+                    }
                 }
+
                 return String(field);
             };
 
-            // 3. Map result to state
+            // 3. Map result to state (matching backend JSON structure)
             const mappedAnalysis: ProductAnalysis = {
-                type: json.product_type || 'Unknown Product',
-                color: json.colors?.[0] || 'Unknown Color',
-                material: json.materials?.[0] || 'Unknown Material',
-                details: json.features?.join(', ') || '',
-                logo_front: getLogoDesc((json as any).logo_front),
-                logo_back: getLogoDesc((json as any).logo_back),
+                type: json.product_type || json.productType || 'Product type not detected',
+                color: json.color_name || json.colorName || 'Color not detected',
+                material: json.material || 'Material not detected',
+                details: (() => {
+                    const detailsParts: string[] = [];
+                    // Combine details object fields
+                    if (json.details && typeof json.details === 'object') {
+                        Object.entries(json.details).forEach(([_, value]) => {
+                            if (value && value !== 'Unknown' && value !== 'N/A') {
+                                detailsParts.push(`${value}`);
+                            }
+                        });
+                    }
+                    // Add additional details array
+                    if (json.additional_details && Array.isArray(json.additional_details)) {
+                        detailsParts.push(...json.additional_details);
+                    }
+                    return detailsParts.join(', ') || 'No details detected';
+                })(),
+                logo_front: getLogoDesc(json.logo_front),
+                logo_back: getLogoDesc(json.logo_back),
             };
 
             setProductAnalysis(mappedAnalysis);
