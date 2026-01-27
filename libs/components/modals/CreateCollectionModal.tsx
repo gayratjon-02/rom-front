@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useTheme } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import styles from '@/scss/styles/Modals/CreateCollectionModal.module.scss';
+import React, { useState } from "react";
+import { useTheme } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import styles from "@/scss/styles/Modals/CreateCollectionModal.module.scss";
 
 interface CreateCollectionModalProps {
   isOpen: boolean;
@@ -14,23 +14,27 @@ interface CreateCollectionModalProps {
 const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
   isOpen,
   onClose,
-  onOpenBrandModal
+  onOpenBrandModal,
 }) => {
   const theme = useTheme();
-  const isDarkMode = theme.palette.mode === 'dark';
+  const isDarkMode = theme.palette.mode === "dark";
 
   const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    brand: '',
-    description: '',
-    referenceImage: null as File | null
+    name: "",
+    code: "",
+    brand: "",
+    description: "",
+    referenceImage: null as File | null,
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -38,7 +42,7 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
     if (e.target.files && e.target.files[0]) {
       setFormData({
         ...formData,
-        referenceImage: e.target.files[0]
+        referenceImage: e.target.files[0],
       });
     }
   };
@@ -46,7 +50,7 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission
-    console.log('Collection data:', formData);
+    console.log("Collection data:", formData);
     onClose();
   };
 
@@ -142,7 +146,7 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
 
           {/* Reference Image */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>DA Reference Image (Optional)</label>
+            <label className={styles.label}>DA Reference Image</label>
             <div className={styles.uploadSection}>
               <div className={styles.uploadBox}>
                 <input
@@ -158,17 +162,17 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
                 </label>
               </div>
               <div className={styles.uploadDescription}>
-                <p>Upload a reference image to automatically analyze the visual style (Direction Artistique) for this collection.</p>
+                <p>
+                  Upload a reference image to automatically analyze the visual
+                  style (Direction Artistique) for this collection.
+                </p>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className={styles.actions}>
-            <button
-              type="submit"
-              className={styles.createButton}
-            >
+            <button type="submit" className={styles.createButton}>
               Create Collection
             </button>
             <button
