@@ -8,6 +8,7 @@ import HomeLeft from "@/libs/components/homePage/HomeLeft";
 import HomeMiddle from "@/libs/components/homePage/HomeMiddle";
 import HomeBottom from "@/libs/components/homePage/HomeButtom";
 import { Brand } from "@/libs/types/homepage/brand";
+import HomeRight from "@/libs/components/homePage/HomeRight";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,6 +71,7 @@ export default function Home() {
           background: isDarkMode ? '#1a1a1a' : '#f5f5f5'
         }}>
           <HomeMiddle />
+          <HomeRight />
           <HomeBottom />
         </div>
       </div>

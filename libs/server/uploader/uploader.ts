@@ -1,39 +1,15 @@
-/**
- * File Upload API
- * Frontend integration for backend files controller
- */
 
 import {
-    API_URL_NEXT,
-    AuthApiError,
+    API_URL_NEXT, AuthApiError,
 } from '@/libs/components/types/config';
 import { getAuthToken } from '@/libs/server/HomePage/signup';
+import { UploadImageResponse, UploadProgress } from '@/libs/types/uploader/uploader.input';
 
 // API Configuration
 const API_URL = API_URL_NEXT;
 const API_BASE = `${API_URL}/api`;
 
-// Types
-export interface UploadImageResponse {
-    filename: string;
-    mimetype: string;
-    size: number;
-    path: string;
-    url: string;
-}
 
-export interface UploadProgress {
-    loaded: number;
-    total: number;
-    percentage: number;
-}
-
-/**
- * Upload a single image file
- * @param file - The file to upload
- * @param onProgress - Optional callback for upload progress
- * @returns Promise with upload result containing URL
- */
 export async function uploadImage(
     file: File,
     onProgress?: (progress: UploadProgress) => void
@@ -134,11 +110,6 @@ export async function uploadImage(
     });
 }
 
-/**
- * Upload image without progress tracking (simpler version)
- * @param file - The file to upload
- * @returns Promise with upload result
- */
 export async function uploadImageSimple(file: File): Promise<UploadImageResponse> {
     const formData = new FormData();
     formData.append('file', file);
@@ -174,12 +145,6 @@ export async function uploadImageSimple(file: File): Promise<UploadImageResponse
     return data as UploadImageResponse;
 }
 
-/**
- * Upload DA reference image for collection
- * @param file - The DA reference image
- * @param onProgress - Optional progress callback
- * @returns Promise with URL of uploaded image
- */
 export async function uploadDAImage(
     file: File,
     onProgress?: (progress: UploadProgress) => void
@@ -188,12 +153,7 @@ export async function uploadDAImage(
     return result.url;
 }
 
-/**
- * Upload product image
- * @param file - The product image
- * @param onProgress - Optional progress callback
- * @returns Promise with upload result
- */
+
 export async function uploadProductImage(
     file: File,
     onProgress?: (progress: UploadProgress) => void
@@ -201,12 +161,7 @@ export async function uploadProductImage(
     return uploadImage(file, onProgress);
 }
 
-/**
- * Validate image file before upload
- * @param file - The file to validate
- * @param maxSizeMB - Maximum file size in MB (default: 10)
- * @returns Object with isValid and error message
- */
+
 export function validateImageFile(
     file: File,
     maxSizeMB: number = 10
@@ -232,11 +187,6 @@ export function validateImageFile(
     return { isValid: true };
 }
 
-/**
- * Convert File to base64 string
- * @param file - The file to convert
- * @returns Promise with base64 string
- */
 export function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
