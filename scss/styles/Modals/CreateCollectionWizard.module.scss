@@ -260,7 +260,9 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
+  line-height: 1.5;
   transition: all 0.2s ease;
 
   &::placeholder {
@@ -401,12 +403,17 @@
   position: relative;
   border-radius: 14px;
   overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  
+  .light & {
+    background: rgba(0, 0, 0, 0.05);
+  }
 }
 
 .previewImage {
   width: 100%;
   height: 280px;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .imageOverlay {
@@ -611,9 +618,14 @@
 
 .reviewImage {
   width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
+  max-height: 220px;
+  object-fit: contain;
   border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  
+  .light & {
+    background: rgba(0, 0, 0, 0.05);
+  }
 }
 
 .collectionInfo {
