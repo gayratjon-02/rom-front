@@ -37,6 +37,7 @@ interface FormData {
 interface DAAnalysis {
     background: string;
     lighting: string;
+    composition: string;
     props_decor: string;
     mood: string;
     color_palette: string[];
@@ -46,6 +47,7 @@ interface DAAnalysis {
 const mockDAAnalysis: DAAnalysis = {
     background: "Clean white cyclorama with soft natural shadows, creating an infinite horizon effect",
     lighting: "Soft diffused daylight from large windows, warm golden hour tones with minimal harsh shadows",
+    composition: "Editorial centered portrait, depth of field focused on foreground, rule of thirds framing",
     props_decor: "Minimalist wooden stool, dried pampas grass arrangement, neutral linen fabric draping",
     mood: "Serene, sophisticated, effortlessly elegant with a touch of Scandinavian simplicity",
     color_palette: ["#F5F5F0", "#E8E4DF", "#D4C8BE", "#A69B8D", "#7A6F63"]
@@ -614,6 +616,16 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                 value={daAnalysis.lighting}
                                                 onChange={e => handleAnalysisChange('lighting', e.target.value)}
                                                 className={styles.input}
+                                            />
+                                        </div>
+
+                                        <div className={styles.formGroup}>
+                                            <label>Composition</label>
+                                            <textarea
+                                                value={daAnalysis.composition}
+                                                onChange={e => handleAnalysisChange('composition', e.target.value)}
+                                                className={styles.textarea}
+                                                rows={2}
                                             />
                                         </div>
 
