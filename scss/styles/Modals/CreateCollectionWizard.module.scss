@@ -343,6 +343,33 @@
   align-items: center;
   justify-content: center;
   color: #7c3aed;
+  transition: all 0.3s ease;
+
+  &.active {
+    background: rgba(79, 70, 229, 0.3);
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
+  }
+}
+
+// Dragging state
+.isDragging {
+  border-color: #4f46e5 !important;
+  border-style: solid !important;
+  background: rgba(79, 70, 229, 0.1) !important;
+  box-shadow: 0 0 30px rgba(79, 70, 229, 0.2);
+  animation: pulse-border 1s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: #4f46e5;
+    box-shadow: 0 0 20px rgba(79, 70, 229, 0.2);
+  }
+  50% {
+    border-color: #7c3aed;
+    box-shadow: 0 0 30px rgba(124, 58, 237, 0.4);
+  }
 }
 
 .dropTitle {

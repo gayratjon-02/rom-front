@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@mui/material';
 import {
@@ -102,6 +102,10 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     const nameInputRef = useRef<HTMLInputElement>(null);
     const codeInputRef = useRef<HTMLInputElement>(null);
     const descriptionRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Drag state
+    const [isDragging, setIsDragging] = useState(false);
 
     // Handle input changes
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -119,10 +123,8 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         }
     };
 
-    // Handle image upload
-    const handleImageDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        const file = e.dataTransfer.files[0];
+    // Process dropped/selected file
+    const processFile = useCallback((file: File) => {
         if (file && file.type.startsWith('image/')) {
             setUploadedImage(file);
             const reader = new FileReader();
@@ -131,15 +133,73 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         }
     }, []);
 
+    // Handle image drop on drop zone
+    const handleImageDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        processFile(file);
+    }, [processFile]);
+
+    // Handle file input change
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            setUploadedImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
-            reader.readAsDataURL(file);
+            processFile(file);
         }
     };
+
+    // Handle click to open file picker
+    const handleDropZoneClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    // Global drag-drop listeners (when modal is open and on step 2)
+    useEffect(() => {
+        if (!isOpen || currentStep !== 2 || isAnalyzing) return;
+
+        const handleGlobalDragEnter = (e: DragEvent) => {
+            e.preventDefault();
+            if (e.dataTransfer?.types.includes('Files')) {
+                setIsDragging(true);
+            }
+        };
+
+        const handleGlobalDragLeave = (e: DragEvent) => {
+            e.preventDefault();
+            // Only set false if leaving the window
+            if (e.relatedTarget === null) {
+                setIsDragging(false);
+            }
+        };
+
+        const handleGlobalDragOver = (e: DragEvent) => {
+            e.preventDefault();
+        };
+
+        const handleGlobalDrop = (e: DragEvent) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const file = e.dataTransfer?.files[0];
+            if (file) {
+                processFile(file);
+            }
+        };
+
+        // Add global listeners
+        document.addEventListener('dragenter', handleGlobalDragEnter);
+        document.addEventListener('dragleave', handleGlobalDragLeave);
+        document.addEventListener('dragover', handleGlobalDragOver);
+        document.addEventListener('drop', handleGlobalDrop);
+
+        return () => {
+            document.removeEventListener('dragenter', handleGlobalDragEnter);
+            document.removeEventListener('dragleave', handleGlobalDragLeave);
+            document.removeEventListener('dragover', handleGlobalDragOver);
+            document.removeEventListener('drop', handleGlobalDrop);
+        };
+    }, [isOpen, currentStep, isAnalyzing, processFile]);
 
     // Navigate steps
     const goToNextStep = () => {
@@ -361,9 +421,11 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                         </div>
 
                                         <div
-                                            className={`${styles.dropZone} ${imagePreview ? styles.hasImage : ''}`}
+                                            className={`${styles.dropZone} ${imagePreview ? styles.hasImage : ''} ${isDragging ? styles.isDragging : ''}`}
                                             onDrop={handleImageDrop}
-                                            onDragOver={e => e.preventDefault()}
+                                            onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                                            onDragLeave={() => setIsDragging(false)}
+                                            onClick={!imagePreview ? handleDropZoneClick : undefined}
                                         >
                                             {imagePreview ? (
                                                 <div className={styles.imagePreviewContainer}>
@@ -371,7 +433,10 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                     <div className={styles.imageOverlay}>
                                                         <button
                                                             className={styles.changeImageBtn}
-                                                            onClick={() => document.getElementById('daImageInput')?.click()}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                fileInputRef.current?.click();
+                                                            }}
                                                         >
                                                             Change Image
                                                         </button>
@@ -379,14 +444,17 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                 </div>
                                             ) : (
                                                 <div className={styles.dropContent}>
-                                                    <div className={styles.uploadIconWrapper}>
+                                                    <div className={`${styles.uploadIconWrapper} ${isDragging ? styles.active : ''}`}>
                                                         <Upload size={32} />
                                                     </div>
-                                                    <p className={styles.dropTitle}>Drop your DA reference image here</p>
+                                                    <p className={styles.dropTitle}>
+                                                        {isDragging ? 'Drop your image here!' : 'Drop your DA reference image here'}
+                                                    </p>
                                                     <p className={styles.dropSubtitle}>or click to browse</p>
                                                 </div>
                                             )}
                                             <input
+                                                ref={fileInputRef}
                                                 id="daImageInput"
                                                 type="file"
                                                 accept="image/*"
