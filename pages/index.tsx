@@ -10,6 +10,8 @@ import HomeBottom from "@/libs/components/homePage/HomeButtom";
 import { Brand } from "@/libs/types/homepage/brand";
 import { Collection } from "@/libs/types/homepage/collection";
 import HomeRight from "@/libs/components/homePage/HomeRight";
+// 🔒 XAVFSIZLIK: withAuth HOC import
+import { withAuth } from "@/libs/components/auth/withAuth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

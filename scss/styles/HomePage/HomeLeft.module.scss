@@ -348,6 +348,25 @@
     color: #ffffff;
   }
 
+  &.active {
+    background: rgba(79, 70, 229, 0.25);
+    color: #ffffff;
+    font-weight: 500;
+
+    .collectionIcon {
+      color: #8b85ff;
+    }
+
+    .light & {
+      background: rgba(79, 70, 229, 0.15);
+      color: #4f46e5;
+
+      .collectionIcon {
+        color: #4f46e5;
+      }
+    }
+  }
+
   .light & {
     color: rgba(0, 0, 0, 0.75);
 
