@@ -5,9 +5,9 @@ import { useRouter } from 'next/router';
 import styles from '@/scss/styles/HomePage/HomeLeft.module.scss';
 import { getUserInfo, logout, UserInfo } from '@/libs/server/HomePage/signup';
 import { getAllBrands, updateBrand, deleteBrand } from '@/libs/server/HomePage/brand';
-import { getCollectionsByBrand } from '@/libs/server/HomePage/collection';
+import { getCollectionsByBrand, updateCollection, deleteCollection } from '@/libs/server/HomePage/collection';
 import { Brand, UpdateBrandData } from '@/libs/types/homepage/brand';
-import { Collection } from '@/libs/types/homepage/collection';
+import { Collection, UpdateCollectionData } from '@/libs/types/homepage/collection';
 import CreateCollectionWizard from '@/libs/components/modals/CreateCollectionWizard';
 import CreateBrandModal from '@/libs/components/modals/CreateBrandModal';
 
@@ -51,6 +51,14 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   const [editBrandName, setEditBrandName] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmBrand, setDeleteConfirmBrand] = useState<Brand | null>(null);
+
+  // Edit/Delete collection states
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
+  const [isEditCollectionModalOpen, setIsEditCollectionModalOpen] = useState(false);
+  const [editCollectionName, setEditCollectionName] = useState('');
+  const [editCollectionCode, setEditCollectionCode] = useState('');
+  const [isDeletingCollection, setIsDeletingCollection] = useState(false);
+  const [deleteConfirmCollection, setDeleteConfirmCollection] = useState<{ collection: Collection, brandId: string } | null>(null);
 
   useEffect(() => {
     const info = getUserInfo();
@@ -174,6 +182,66 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
     }
   };
 
+  // Edit collection handlers
+  const handleEditCollectionClick = (collection: Collection, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCollection(collection);
+    setEditCollectionName(collection.name);
+    setEditCollectionCode(collection.code || '');
+    setIsEditCollectionModalOpen(true);
+  };
+
+  const handleEditCollectionSave = async () => {
+    if (!editingCollection || !editCollectionName.trim()) return;
+
+    try {
+      const updatedCollection = await updateCollection(editingCollection.id, {
+        name: editCollectionName.trim(),
+        code: editCollectionCode.trim() || undefined
+      });
+      // Update in brandCollections
+      setBrandCollections(prev => {
+        const newState = { ...prev };
+        Object.keys(newState).forEach(brandId => {
+          newState[brandId] = newState[brandId].map(c =>
+            c.id === updatedCollection.id ? updatedCollection : c
+          );
+        });
+        return newState;
+      });
+      setIsEditCollectionModalOpen(false);
+      setEditingCollection(null);
+    } catch (error) {
+      console.error('Error updating collection:', error);
+    }
+  };
+
+  // Delete collection handlers
+  const handleDeleteCollectionClick = (collection: Collection, brandId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteConfirmCollection({ collection, brandId });
+  };
+
+  const handleDeleteCollectionConfirm = async () => {
+    if (!deleteConfirmCollection) return;
+
+    setIsDeletingCollection(true);
+    try {
+      await deleteCollection(deleteConfirmCollection.collection.id);
+      setBrandCollections(prev => ({
+        ...prev,
+        [deleteConfirmCollection.brandId]: prev[deleteConfirmCollection.brandId].filter(
+          c => c.id !== deleteConfirmCollection.collection.id
+        )
+      }));
+      setDeleteConfirmCollection(null);
+    } catch (error) {
+      console.error('Error deleting collection:', error);
+    } finally {
+      setIsDeletingCollection(false);
+    }
+  };
+
   return (
     <>
       <div className={`${styles.sidebar} ${!isDarkMode ? styles.light : ''} ${isOpen ? styles.open : ''}`}>
@@ -286,24 +354,46 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
 
                     {/* Collections list */}
                     {brandCollections[brand.id]?.map((collection) => (
-                      <button
-                        key={collection.id}
-                        className={styles.collectionItem}
-                        onClick={() => {
-                          console.log('Collection selected:', collection);
-                          // TODO: Navigate to collection or select it
-                        }}
-                      >
-                        <span className={styles.collectionIcon}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                          </svg>
-                        </span>
-                        <span className={styles.collectionName}>{collection.name}</span>
-                        {collection.code && (
-                          <span className={styles.collectionCode}>{collection.code}</span>
-                        )}
-                      </button>
+                      <div key={collection.id} className={styles.collectionItemWrapper}>
+                        <button
+                          className={styles.collectionItem}
+                          onClick={() => {
+                            console.log('Collection selected:', collection);
+                            // TODO: Navigate to collection or select it
+                          }}
+                        >
+                          <span className={styles.collectionIcon}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            </svg>
+                          </span>
+                          <span className={styles.collectionName}>{collection.name}</span>
+                          {collection.code && (
+                            <span className={styles.collectionCode}>{collection.code}</span>
+                          )}
+                        </button>
+                        <div className={styles.collectionActions}>
+                          <button
+                            className={styles.actionBtn}
+                            onClick={(e) => handleEditCollectionClick(collection, e)}
+                            title="Edit"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                          <button
+                            className={`${styles.actionBtn} ${styles.deleteAction}`}
+                            onClick={(e) => handleDeleteCollectionClick(collection, brand.id, e)}
+                            title="Delete"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="m19 6-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
                     ))}
 
                     {/* No collections message */}
@@ -453,7 +543,7 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Brand Confirmation Modal */}
       {deleteConfirmBrand && (
         <div className={styles.modalOverlay} onClick={() => setDeleteConfirmBrand(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -472,6 +562,63 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
                 disabled={isDeleting}
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Collection Modal */}
+      {isEditCollectionModalOpen && editingCollection && (
+        <div className={styles.modalOverlay} onClick={() => setIsEditCollectionModalOpen(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Collection</h3>
+            <input
+              type="text"
+              value={editCollectionName}
+              onChange={(e) => setEditCollectionName(e.target.value)}
+              className={styles.modalInput}
+              placeholder="Collection name"
+              autoFocus
+            />
+            <input
+              type="text"
+              value={editCollectionCode}
+              onChange={(e) => setEditCollectionCode(e.target.value)}
+              className={styles.modalInput}
+              placeholder="Collection code (optional)"
+              style={{ marginTop: '12px' }}
+            />
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setIsEditCollectionModalOpen(false)}>
+                Cancel
+              </button>
+              <button className={styles.saveBtn} onClick={handleEditCollectionSave}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Collection Confirmation Modal */}
+      {deleteConfirmCollection && (
+        <div className={styles.modalOverlay} onClick={() => setDeleteConfirmCollection(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3>Delete Collection</h3>
+            <p className={styles.modalText}>
+              Are you sure you want to delete <strong>{deleteConfirmCollection.collection.name}</strong>?
+            </p>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setDeleteConfirmCollection(null)}>
+                Cancel
+              </button>
+              <button
+                className={styles.deleteBtn}
+                onClick={handleDeleteCollectionConfirm}
+                disabled={isDeletingCollection}
+              >
+                {isDeletingCollection ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
