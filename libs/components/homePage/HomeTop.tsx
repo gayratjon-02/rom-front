@@ -11,35 +11,22 @@ import DownloadIcon from '@mui/icons-material/Download';
 import HistoryIcon from '@mui/icons-material/History';
 import styles from "@/scss/styles/HomePage/HomeTop.module.scss";
 import { ColorModeContext } from "@/pages/_app";
-import CreateCollectionModal from '@/libs/components/modals/CreateCollectionModal';
 import CreateBrandModal from '@/libs/components/modals/CreateBrandModal';
 
 const HomeTop = () => {
     const theme = useTheme();
     const colorMode = useContext(ColorModeContext);
-    const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
     const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
 
-    const handleOpenCollectionModal = () => {
-        setIsCollectionModalOpen(true);
-    };
-
-    const handleCloseCollectionModal = () => {
-        setIsCollectionModalOpen(false);
-    };
+    // Temporary: Check if brands exist (in real app, this would come from API/state)
+    const hasBrands = false; // Set to true when brands are available
 
     const handleOpenBrandModal = () => {
-        setIsCollectionModalOpen(false);
         setIsBrandModalOpen(true);
     };
 
     const handleCloseBrandModal = () => {
         setIsBrandModalOpen(false);
-    };
-
-    const handleBackToCollection = () => {
-        setIsBrandModalOpen(false);
-        setIsCollectionModalOpen(true);
     };
 
     return (
@@ -53,11 +40,11 @@ const HomeTop = () => {
                         <button className={styles.tab}>Ad Recreation</button>
                     </div>
 
-                    {/* Dropdown Context - Opens Collection Modal */}
-                    <div className={styles.dropdown} onClick={handleOpenCollectionModal}>
+                    {/* Brand Dropdown/Button - Opens Brand Modal */}
+                    <div className={styles.dropdown} onClick={handleOpenBrandModal}>
                         <FolderIcon fontSize="small" />
-                        <span>Collection</span>
-                        <ArrowDropDownIcon fontSize="small" />
+                        <span>{hasBrands ? 'Brand' : 'Create New Brand'}</span>
+                        {hasBrands && <ArrowDropDownIcon fontSize="small" />}
                     </div>
 
                     {/* Style Set Button */}
@@ -98,15 +85,9 @@ const HomeTop = () => {
             </div>
 
             {/* Modals */}
-            <CreateCollectionModal
-                isOpen={isCollectionModalOpen}
-                onClose={handleCloseCollectionModal}
-                onOpenBrandModal={handleOpenBrandModal}
-            />
             <CreateBrandModal
                 isOpen={isBrandModalOpen}
                 onClose={handleCloseBrandModal}
-                onBack={handleBackToCollection}
             />
         </>
     )

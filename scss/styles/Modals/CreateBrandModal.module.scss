@@ -127,12 +127,13 @@
   }
 }
 
-.input {
+.input,
+.textarea {
   width: 100%;
   padding: 12px 16px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.05);
   color: #ffffff;
   font-size: 14px;
   font-family: inherit;
@@ -145,12 +146,12 @@
   &:focus {
     outline: none;
     border-color: #4f46e5;
-    background: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.08);
   }
 
   .light & {
     border: 1px solid rgba(0, 0, 0, 0.1);
-    background: rgba(0, 0, 0, 0.03);
+    background-color: rgba(0, 0, 0, 0.03);
     color: #1a1a1a;
 
     &::placeholder {
@@ -159,9 +160,15 @@
 
     &:focus {
       border-color: #4f46e5;
-      background: rgba(0, 0, 0, 0.05);
+      background-color: rgba(0, 0, 0, 0.05);
     }
   }
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
 }
 
 .actions {
@@ -172,7 +179,6 @@
 }
 
 .createButton,
-.backButton,
 .cancelButton {
   padding: 12px 24px;
   border-radius: 8px;
@@ -198,7 +204,7 @@
   }
 }
 
-.backButton {
+.cancelButton {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.9);
 
@@ -212,25 +218,6 @@
 
     &:hover {
       background: rgba(0, 0, 0, 0.08);
-    }
-  }
-}
-
-.cancelButton {
-  background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  .light & {
-    color: rgba(0, 0, 0, 0.7);
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.03);
-      color: rgba(0, 0, 0, 0.9);
     }
   }
 }

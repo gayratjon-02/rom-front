@@ -8,24 +8,32 @@ import styles from '@/scss/styles/Modals/CreateBrandModal.module.scss';
 interface CreateBrandModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onBack: () => void;
 }
 
 const CreateBrandModal: React.FC<CreateBrandModalProps> = ({
   isOpen,
-  onClose,
-  onBack
+  onClose
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
 
-  const [brandName, setBrandName] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    brief: ''
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission
-    console.log('Brand name:', brandName);
-    onBack(); // Go back to collection modal
+    console.log('Brand data:', formData);
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -52,11 +60,25 @@ const CreateBrandModal: React.FC<CreateBrandModalProps> = ({
             <label className={styles.label}>Brand Name</label>
             <input
               type="text"
-              value={brandName}
-              onChange={(e) => setBrandName(e.target.value)}
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
               placeholder="e.g., New Balance, Nike, Adidas"
               className={styles.input}
               required
+            />
+          </div>
+
+          {/* Brand Brief */}
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Brand Brief (Optional)</label>
+            <textarea
+              name="brief"
+              value={formData.brief}
+              onChange={handleInputChange}
+              placeholder="e.g., A lifestyle brand focused on urban fashion and streetwear"
+              className={styles.textarea}
+              rows={4}
             />
           </div>
 
@@ -67,13 +89,6 @@ const CreateBrandModal: React.FC<CreateBrandModalProps> = ({
               className={styles.createButton}
             >
               Create Brand
-            </button>
-            <button
-              type="button"
-              onClick={onBack}
-              className={styles.backButton}
-            >
-              Back
             </button>
             <button
               type="button"
