@@ -576,6 +576,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                         {isDragging ? 'Drop your image here!' : 'Drop your DA reference image here'}
                                                     </p>
                                                     <p className={styles.dropSubtitle}>or click to browse</p>
+                                                    <p className={styles.dropHint}>Max file size: 15MB • JPG, PNG, WebP</p>
                                                 </div>
                                             )}
                                             <input

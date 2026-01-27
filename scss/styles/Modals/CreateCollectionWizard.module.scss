@@ -438,6 +438,16 @@
   }
 }
 
+.dropHint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  margin: 8px 0 0 0;
+
+  .light & {
+    color: rgba(0, 0, 0, 0.35);
+  }
+}
+
 .hiddenInput {
   display: none;
 }
