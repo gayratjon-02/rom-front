@@ -26,4 +26,5 @@ export interface UpdateCollectionData {
     name?: string;
     code?: string;
     description?: string;
+    analyzed_da_json?: Record<string, any>;
 }

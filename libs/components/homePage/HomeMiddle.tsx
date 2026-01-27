@@ -23,6 +23,7 @@ import {
     updateMergedPrompts as updatePromptsAPI,
     mergePrompts,
 } from '@/libs/server/HomePage/merging';
+import { updateCollection } from '@/libs/server/HomePage/collection';
 
 interface HomeMiddleProps {
     isDarkMode?: boolean;
@@ -238,7 +239,24 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
 
             // Save prompts to backend immediately
             // 1. Trigger backend merge (required to initialize prompt slots)
-            await mergePrompts(generation.id);
+            try {
+                await mergePrompts(generation.id);
+            } catch (error: any) {
+                // If collection DA is missing, try to inject mock DA and retry
+                const errorMsg = error?.message || '';
+                const responseMsg = error?.response?.message || '';
+
+                if (errorMsg.includes('Collection DA') || responseMsg.includes('Collection DA')) {
+                    console.warn('Collection DA missing, injecting mock data...');
+                    await updateCollection(selectedCollection.id, {
+                        analyzed_da_json: mockDAAnalysis
+                    });
+                    // Retry merge
+                    await mergePrompts(generation.id);
+                } else {
+                    throw error;
+                }
+            }
 
             // 2. Overwrite with our calculated 6-shot prompts
             await updatePromptsAPI(generation.id, { prompts: initialPrompts });
