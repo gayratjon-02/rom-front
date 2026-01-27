@@ -8,6 +8,7 @@ import {
   login,
   saveAuthToken,
   saveUserInfo,
+  isAuthenticated,
   AuthApiError,
 } from "@/libs/server/HomePage/signup";
 
@@ -119,6 +120,15 @@ const SignupPage = () => {
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  // 🔒 XAVFSIZLIK: Agar user allaqachon login qilgan bo'lsa, home ga redirect
+  useEffect(() => {
+    if (isAuthenticated()) {
+      // Token bor - home page ga o'tish
+      const redirectPath = (router.query.redirect as string) || '/';
+      router.replace(redirectPath);
+    }
+  }, [router]);
 
   // Toggle Animation Logic
   useEffect(() => {

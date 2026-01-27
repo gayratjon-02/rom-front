@@ -23,7 +23,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export default function Home() {
+// 🔒 XAVFSIZLIK: Protected component - login kerak
+function Home() {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
 
@@ -93,3 +94,6 @@ export default function Home() {
     </div>
   );
 }
+
+// 🔒 XAVFSIZLIK: withAuth HOC bilan wrap qilish
+export default withAuth(Home);
