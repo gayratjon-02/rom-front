@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import styles from '@/scss/styles/HomePage/HomeLeft.module.scss';
 import { getUserInfo, logout, UserInfo } from '@/libs/server/HomePage/signup';
-import { getAllBrands } from '@/libs/server/HomePage/brand';
+import { getAllBrands, updateBrand, deleteBrand } from '@/libs/server/HomePage/brand';
 import { getCollectionsByBrand } from '@/libs/server/HomePage/collection';
-import { Brand } from '@/libs/types/homepage/brand';
+import { Brand, UpdateBrandData } from '@/libs/types/homepage/brand';
 import { Collection } from '@/libs/types/homepage/collection';
 import CreateCollectionWizard from '@/libs/components/modals/CreateCollectionWizard';
 import CreateBrandModal from '@/libs/components/modals/CreateBrandModal';
@@ -44,6 +44,13 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   const [isCollectionWizardOpen, setIsCollectionWizardOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
   const [selectedBrandForCollection, setSelectedBrandForCollection] = useState<Brand | null>(null);
+
+  // Edit/Delete brand states
+  const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editBrandName, setEditBrandName] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmBrand, setDeleteConfirmBrand] = useState<Brand | null>(null);
 
   useEffect(() => {
     const info = getUserInfo();
@@ -121,6 +128,50 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   const handleBrandCreated = (newBrand: Brand) => {
     console.log('New brand created:', newBrand);
     if (onBrandCreated) onBrandCreated();
+  };
+
+  // Edit brand handlers
+  const handleEditBrandClick = (brand: Brand, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingBrand(brand);
+    setEditBrandName(brand.name);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditBrandSave = async () => {
+    if (!editingBrand || !editBrandName.trim()) return;
+
+    try {
+      const updatedBrand = await updateBrand(editingBrand.id, { name: editBrandName.trim() });
+      setBrands(prev => prev.map(b => b.id === updatedBrand.id ? updatedBrand : b));
+      setIsEditModalOpen(false);
+      setEditingBrand(null);
+    } catch (error) {
+      console.error('Error updating brand:', error);
+    }
+  };
+
+  // Delete brand handlers
+  const handleDeleteBrandClick = (brand: Brand, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteConfirmBrand(brand);
+  };
+
+  const handleDeleteBrandConfirm = async () => {
+    if (!deleteConfirmBrand) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteBrand(deleteConfirmBrand.id);
+      setBrands(prev => prev.filter(b => b.id !== deleteConfirmBrand.id));
+      setDeleteConfirmBrand(null);
+      setExpandedBrandId(null);
+      if (onBrandCreated) onBrandCreated(); // Refresh
+    } catch (error) {
+      console.error('Error deleting brand:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -270,6 +321,33 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
                       <span className={styles.addIcon}>+</span>
                       <span>Create New Collection</span>
                     </button>
+
+                    {/* Divider */}
+                    <div className={styles.dropdownDivider} />
+
+                    {/* Edit Brand */}
+                    <button
+                      className={styles.dropdownItem}
+                      onClick={(e) => handleEditBrandClick(brand, e)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                      <span>Edit Brand</span>
+                    </button>
+
+                    {/* Delete Brand */}
+                    <button
+                      className={`${styles.dropdownItem} ${styles.danger}`}
+                      onClick={(e) => handleDeleteBrandClick(brand, e)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="m19 6-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      <span>Delete Brand</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -349,6 +427,56 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
         onClose={() => setIsBrandModalOpen(false)}
         onBrandCreated={handleBrandCreated}
       />
+
+      {/* Edit Brand Modal */}
+      {isEditModalOpen && editingBrand && (
+        <div className={styles.modalOverlay} onClick={() => setIsEditModalOpen(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3>Edit Brand</h3>
+            <input
+              type="text"
+              value={editBrandName}
+              onChange={(e) => setEditBrandName(e.target.value)}
+              className={styles.modalInput}
+              placeholder="Brand name"
+              autoFocus
+            />
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setIsEditModalOpen(false)}>
+                Cancel
+              </button>
+              <button className={styles.saveBtn} onClick={handleEditBrandSave}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmBrand && (
+        <div className={styles.modalOverlay} onClick={() => setDeleteConfirmBrand(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3>Delete Brand</h3>
+            <p className={styles.modalText}>
+              Are you sure you want to delete <strong>{deleteConfirmBrand.name}</strong>?
+              This will also delete all collections in this brand.
+            </p>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setDeleteConfirmBrand(null)}>
+                Cancel
+              </button>
+              <button
+                className={styles.deleteBtn}
+                onClick={handleDeleteBrandConfirm}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
