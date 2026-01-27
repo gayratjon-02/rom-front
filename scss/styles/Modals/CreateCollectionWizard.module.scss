@@ -441,6 +441,63 @@
   }
 }
 
+// Upload Progress Overlay
+.uploadProgressOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+}
+
+.uploadProgressContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #ffffff;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+.uploadProgressBar {
+  width: 150px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.uploadProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+// Upload Success Badge
+.uploadSuccessBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.9);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+
 // AI Analyzer Loading
 .analyzingContainer {
   display: flex;

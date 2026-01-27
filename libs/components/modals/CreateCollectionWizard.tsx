@@ -17,6 +17,8 @@ import styles from '@/scss/styles/Modals/CreateCollectionWizard.module.scss';
 import { createCollection } from '@/libs/server/HomePage/collection';
 import { Collection } from '@/libs/types/homepage/collection';
 import { AuthApiError } from '@/libs/components/types/config';
+import { uploadDAImage, validateImageFile } from '@/libs/server/uploader/uploader';
+import { UploadProgress } from '@/libs/types/uploader/uploader.input';
 
 interface CreateCollectionWizardProps {
     isOpen: boolean;
@@ -98,6 +100,11 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Upload state
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+
     // Input refs for keyboard navigation
     const nameInputRef = useRef<HTMLInputElement>(null);
     const codeInputRef = useRef<HTMLInputElement>(null);
@@ -123,13 +130,44 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         }
     };
 
-    // Process dropped/selected file
-    const processFile = useCallback((file: File) => {
-        if (file && file.type.startsWith('image/')) {
-            setUploadedImage(file);
-            const reader = new FileReader();
-            reader.onloadend = () => setImagePreview(reader.result as string);
-            reader.readAsDataURL(file);
+    // Process dropped/selected file - upload to server
+    const processFile = useCallback(async (file: File) => {
+        if (!file || !file.type.startsWith('image/')) return;
+
+        // Validate file
+        const validation = validateImageFile(file, 10);
+        if (!validation.isValid) {
+            setError(validation.error || 'Invalid file');
+            return;
+        }
+
+        // Set local preview immediately
+        setUploadedImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => setImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+
+        // Upload to server
+        setIsUploading(true);
+        setUploadProgress(0);
+        setError(null);
+
+        try {
+            const imageUrl = await uploadDAImage(file, (progress) => {
+                setUploadProgress(progress.percentage);
+            });
+            setUploadedImageUrl(imageUrl);
+            console.log('DA Image uploaded:', imageUrl);
+        } catch (err) {
+            console.error('Upload error:', err);
+            if (err instanceof AuthApiError) {
+                setError(err.errors.join(', '));
+            } else {
+                setError('Failed to upload image. Please try again.');
+            }
+            // Keep local preview even if upload fails
+        } finally {
+            setIsUploading(false);
         }
     }, []);
 
@@ -430,6 +468,31 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                             {imagePreview ? (
                                                 <div className={styles.imagePreviewContainer}>
                                                     <img src={imagePreview} alt="DA Reference" className={styles.previewImage} />
+
+                                                    {/* Upload Progress Overlay */}
+                                                    {isUploading && (
+                                                        <div className={styles.uploadProgressOverlay}>
+                                                            <div className={styles.uploadProgressContent}>
+                                                                <Loader2 size={24} className={styles.spinner} />
+                                                                <p>Uploading... {uploadProgress}%</p>
+                                                                <div className={styles.uploadProgressBar}>
+                                                                    <div
+                                                                        className={styles.uploadProgressFill}
+                                                                        style={{ width: `${uploadProgress}%` }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Upload Success Badge */}
+                                                    {!isUploading && uploadedImageUrl && (
+                                                        <div className={styles.uploadSuccessBadge}>
+                                                            <Check size={14} />
+                                                            Uploaded
+                                                        </div>
+                                                    )}
+
                                                     <div className={styles.imageOverlay}>
                                                         <button
                                                             className={styles.changeImageBtn}
@@ -462,6 +525,11 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                 className={styles.hiddenInput}
                                             />
                                         </div>
+
+                                        {/* Error Message */}
+                                        {error && (
+                                            <div className={styles.errorMessage}>{error}</div>
+                                        )}
                                     </>
                                 ) : (
                                     /* AI Analysis Loading State */
