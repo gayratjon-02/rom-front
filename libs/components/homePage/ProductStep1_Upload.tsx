@@ -1,9 +1,21 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Image as ImageIcon, X, Plus } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, Plus, CheckCircle } from 'lucide-react';
 import styles from '@/scss/styles/HomePage/HomeMiddle.module.scss';
+
+// Fayl hajmini formatlash uchun helper
+const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// Maksimal rasm hajmi (10MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 interface ProductStep1Props {
     frontImage: File | null;
@@ -105,6 +117,11 @@ const ProductStep1_Upload: React.FC<ProductStep1Props> = ({
                                 className={styles.dropzonePreview}
                             />
                             <div className={styles.dropzoneOverlay}>
+                                <div className={styles.fileInfo}>
+                                    <CheckCircle size={20} style={{ color: '#10b981' }} />
+                                    <span className={styles.fileName}>{frontImage.name}</span>
+                                    <span className={styles.fileSize}>{formatFileSize(frontImage.size)}</span>
+                                </div>
                                 <button
                                     className={styles.removeBtn}
                                     onClick={(e) => {
@@ -112,7 +129,8 @@ const ProductStep1_Upload: React.FC<ProductStep1Props> = ({
                                         onFrontImageChange(null);
                                     }}
                                 >
-                                    Remove
+                                    <X size={14} />
+                                    O'chirish
                                 </button>
                             </div>
                         </>
@@ -153,6 +171,11 @@ const ProductStep1_Upload: React.FC<ProductStep1Props> = ({
                                 className={styles.dropzonePreview}
                             />
                             <div className={styles.dropzoneOverlay}>
+                                <div className={styles.fileInfo}>
+                                    <CheckCircle size={20} style={{ color: '#10b981' }} />
+                                    <span className={styles.fileName}>{backImage.name}</span>
+                                    <span className={styles.fileSize}>{formatFileSize(backImage.size)}</span>
+                                </div>
                                 <button
                                     className={styles.removeBtn}
                                     onClick={(e) => {
@@ -160,7 +183,8 @@ const ProductStep1_Upload: React.FC<ProductStep1Props> = ({
                                         onBackImageChange(null);
                                     }}
                                 >
-                                    Remove
+                                    <X size={14} />
+                                    O'chirish
                                 </button>
                             </div>
                         </>

@@ -253,11 +253,40 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
 
   &:hover {
     background: #dc2626;
+    transform: scale(1.05);
   }
+}
+
+// Fayl ma'lumotlari - yuklangan rasm haqida
+.fileInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.fileName {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  text-align: center;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 // ===== REFERENCE IMAGES =====
