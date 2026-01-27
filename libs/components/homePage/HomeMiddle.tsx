@@ -166,7 +166,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             const generation = await createGeneration({
                 product_id: productId,
                 collection_id: selectedCollection.id,
-                generation_type: 'standard',
+                generation_type: 'product_visuals',
             });
 
             setGenerationId(generation.id);
