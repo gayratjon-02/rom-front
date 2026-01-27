@@ -1,11 +1,20 @@
-/* Sliding Toggle Design */
+/* Creative Glassmorphism Design */
+
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 
 .container {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: #E5E5E5;
+  /* Aurora Gradient Background */
+  background: linear-gradient(-45deg, #1c1e21, #282c34, #3b3e4a, #162447);
+  background-size: 400% 400%;
+  animation: aurora 15s ease infinite;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
 }
@@ -13,16 +22,17 @@
 .wrapper {
   position: relative;
   width: 900px;
-  height: 550px; /* Fixed height for consistency */
+  height: 550px;
   max-width: 95%;
-  background: #FFFFFF;
-  border-radius: 4px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-  overflow: hidden; /* Important for sliding effect */
+  /* Semi-transparent white glass */
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px; /* Increased radius */
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
   display: flex;
 }
 
-/* Background Layers (The Static Parts) */
+/* Background Layers (Triggers) */
 .backgroundLayer {
   width: 50%;
   height: 100%;
@@ -58,65 +68,97 @@
   font-weight: 600;
   text-transform: uppercase;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
+  letter-spacing: 1px;
 
   &:hover {
     background: #333;
     color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
   }
 }
 
-/* Sliding Overlay Card (The Moving Part) */
+/* Sliding Overlay Card */
 .overlayCard {
   position: absolute;
-  top: -5%; /* Overhang top */
-  left: 50%; /* Default Start Position (Login) */
+  top: -5%;
+  left: 50%; /* Default Start */
   width: 50%;
-  height: 110%; /* Overhang bottom */
-  background: #3b3e4a;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  height: 110%;
+  
+  /* Dark Glassmorphism */
+  background: rgba(40, 44, 52, 0.85); /* Dark semi-transparent */
+  backdrop-filter: blur(20px); /* The blurring magic */
+  -webkit-backdrop-filter: blur(20px);
+  
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.6s ease-in-out;
-  /* padding: 40px; -> moved to content */
+  transition: transform 0.6s cubic-bezier(0.45, 0, 0.55, 1); /* Custom easing */
 }
 
-/* Form Content inside Overlay */
+/* Form Content */
 .formContent {
   width: 100%;
   padding: 0 50px;
   color: #fff;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 25px;
   
   h1 {
-    font-size: 2.5rem;
+    font-size: 3.5rem; /* Larger brand */
+    margin-bottom: 0px;
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    /* Gradient Text */
+    background: linear-gradient(135deg, #fff 0%, #ff4081 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 10px rgba(255, 64, 129, 0.3));
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    margin-top: -10px;
     margin-bottom: 10px;
     text-align: center;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
-  
-  /* Shared Form Styles from before */
 }
 
-/* Snake Input Styles (Reused) */
+/* Snake Input Styles */
 .inputGroup {
   position: relative;
   width: 100%;
-  margin-bottom: 15px;
+  margin-bottom: 5px;
+  opacity: 1; /* Default visibility */
+  transform: translateY(0);
 }
 
 .inputField {
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 2px solid #555;
-  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 0;
   color: #fff;
   font-size: 1rem;
+  font-weight: 300;
   outline: none;
+  transition: border-color 0.3s;
   
   &::placeholder { color: transparent; }
   &:focus { border-bottom-color: transparent; }
@@ -124,9 +166,9 @@
 
 .label {
   position: absolute;
-  top: 10px;
+  top: 12px;
   left: 0;
-  color: #888;
+  color: rgba(255, 255, 255, 0.5);
   pointer-events: none;
   font-size: 1rem;
   transition: 0.3s ease all;
@@ -135,8 +177,9 @@
 .inputField:focus ~ .label,
 .inputField:not(:placeholder-shown) ~ .label {
   top: -20px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #ff4081;
+  font-weight: 600;
 }
 
 .snakeSvg {
@@ -152,28 +195,34 @@
 .snakePath {
   fill: none;
   stroke: #ff4081;
-  stroke-width: 4;
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-dasharray: 0 1000;
+  filter: drop-shadow(0 0 5px #ff4081); /* Neon glow */
   opacity: 0;
 }
 
 .submitButton {
-  background: #ff4081; /* Changed to accent color for primary action */
+  background: linear-gradient(90deg, #ff4081, #f50057);
   color: #fff;
   border: none;
-  padding: 15px;
+  padding: 16px;
   border-radius: 30px;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  font-weight: bold;
   cursor: pointer;
-  transition: 0.3s;
+  transition: 0.4s ease;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-top: 10px;
-  box-shadow: 0 5px 15px rgba(255, 64, 129, 0.3);
+  letter-spacing: 2px;
+  margin-top: 15px;
+  box-shadow: 0 5px 20px rgba(245, 0, 87, 0.4);
 
   &:hover {
-    background: #e91e63;
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(245, 0, 87, 0.6);
+  }
+  
+  &:active {
+    transform: scale(0.98);
   }
 }
