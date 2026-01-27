@@ -295,6 +295,20 @@
   @extend .input;
   resize: vertical;
   min-height: 80px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+// Upload Warning Helper
+.uploadWarning {
+  margin-top: 16px;
+  font-size: 13px;
+  color: rgba(234, 179, 8, 0.85);
+  text-align: center;
+  line-height: 1.5;
+
+  .light & {
+    color: rgba(180, 130, 0, 0.9);
+  }
 }
 
 // Drop Zone

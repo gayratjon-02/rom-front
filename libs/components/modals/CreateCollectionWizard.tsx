@@ -526,6 +526,11 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                             />
                                         </div>
 
+                                        {/* Helper Warning */}
+                                        <p className={styles.uploadWarning}>
+                                            ⚠️ Upload an atmospheric reference (background/mood) only. Do not upload product shots here.
+                                        </p>
+
                                         {/* Error Message */}
                                         {error && (
                                             <div className={styles.errorMessage}>{error}</div>
