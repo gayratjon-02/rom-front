@@ -757,25 +757,29 @@
 }
 
 .logoutBtn {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
+  color: #ffffff;
+  font-size: 12px;
   font-weight: 500;
-  padding: 4px 8px;
+  padding: 6px 14px;
   border-radius: 6px;
+  border: none;
+  background: rgba(79, 70, 229, 0.15);
   transition: all 0.2s ease;
   flex-shrink: 0;
+  cursor: pointer;
 
   .light & {
-    color: rgba(0, 0, 0, 0.5);
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.1);
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: #4f46e5;
     color: #ffffff;
 
     .light & {
-      background: rgba(0, 0, 0, 0.08);
-      color: #1a1a1a;
+      background: #4f46e5;
+      color: #ffffff;
     }
   }
 }

@@ -147,6 +147,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
 }
 
 // ===== DROPZONE STYLES =====
@@ -154,12 +155,12 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  margin-bottom: 16px;
   flex: 1;
-  max-height: 280px;
+  min-height: 0;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
