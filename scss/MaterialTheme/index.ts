@@ -304,3 +304,66 @@ export const light = {
 	shadow,
 	typography,
 };
+
+/**
+ * DARK THEME
+ */
+export const dark = {
+	palette: {
+		type: 'dark',
+		background: {
+			default: '#151719', // Dark background matching HomeTop
+			paper: '#1e2124',
+		},
+		primary: {
+			contrastText: '#ffffff',
+			main: '#E92C28',
+		},
+		secondary: {
+			main: '#1646C1',
+		},
+		text: {
+			primary: '#ffffff',
+			secondary: '#b0b3b8',
+			dark: common.white,
+		},
+	},
+	components: {
+        ...light.components, // Inherit component overrides
+        MuiCssBaseline: {
+			styleOverrides: {
+				html: { height: '100%' },
+				body: { background: '#151719', height: '100%', minHeight: '100%', color: '#fff' },
+				p: { margin: '0' },
+			},
+		},
+        MuiOutlinedInput: {
+			styleOverrides: {
+				root: {
+					height: '48px',
+					width: '100%',
+					backgroundColor: '#2a2d31', // Darker input bg
+                    color: '#fff',
+					input: {},
+				},
+				notchedOutline: {
+					padding: '8px',
+					top: '-9px',
+					border: '1px solid #3b3e4a',
+				},
+			},
+		},
+        MuiButton: {
+			styleOverrides: {
+				root: {
+					color: '#fff',
+					minWidth: 'auto',
+					lineHeight: '1.2',
+					boxShadow: 'none',
+				},
+			},
+		},
+    },
+	shadow,
+	typography,
+};

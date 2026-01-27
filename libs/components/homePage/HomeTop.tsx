@@ -1,19 +1,21 @@
-import { Stack, Box } from "@mui/material";
+import { Stack, useTheme } from "@mui/material";
 import FolderIcon from '@mui/icons-material/Folder';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import NightlightRoundIcon from '@mui/icons-material/NightlightRound';
 import ViewStreamIcon from '@mui/icons-material/ViewStream';
 import DownloadIcon from '@mui/icons-material/Download';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import styles from "@/scss/styles/HomePage/HomeTop.module.scss";
-
-// Note: Ensure Next.js allows importing SCSS modules from this path. 
-// If generic import style is preferred, we might need to adjust based on user config.
-// Assuming standart Create Next App SCSS module behavior.
+import { useContext } from "react";
+import { ColorModeContext } from "@/pages/_app";
 
 const HomeTop = () => {
+    const theme = useTheme();
+    const colorMode = useContext(ColorModeContext);
+
     return (
-        <Stack className={styles.container}>
+        <Stack className={`${styles.container} ${styles[theme.palette.mode]}`}>
             {/* Left: Navigation & Context */}
             <div className={styles.leftSection}>
                 {/* Tab Group */}
@@ -40,8 +42,16 @@ const HomeTop = () => {
 
             {/* Right: Actions */}
             <div className={styles.rightSection}>
-                <div className={`${styles.iconButton} ${styles.highlight}`}>
-                    <WbSunnyIcon fontSize="small" />
+                {/* Theme Toggle */}
+                <div
+                    className={`${styles.iconButton} ${styles.highlight}`}
+                    onClick={colorMode.toggleColorMode}
+                >
+                    {theme.palette.mode === 'dark' ? (
+                        <WbSunnyIcon fontSize="small" />
+                    ) : (
+                        <NightlightRoundIcon fontSize="small" />
+                    )}
                 </div>
                 <div className={styles.iconButton}>
                     <ViewStreamIcon fontSize="small" />
