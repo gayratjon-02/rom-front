@@ -302,7 +302,7 @@ const SignupPage = () => {
             onClick={() => setIsSignup(false)}
             disabled={isLoading}
           >
-            Sign In
+            Login
           </button>
         </div>
 
