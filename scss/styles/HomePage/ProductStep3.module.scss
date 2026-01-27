@@ -1,5 +1,6 @@
 // ===== STEP 3: Visual Generation Console =====
 // Fashion brand egalari uchun intuitiv batch generation UI
+// Simplified 6-Shot System
 
 // ===== CSS VARIABLES =====
 .step3Container {
@@ -8,6 +9,7 @@
   flex-direction: column;
   gap: 20px;
 
+  // Dark Mode (Default)
   --console-bg: rgba(15, 23, 42, 0.6);
   --console-surface: rgba(30, 41, 59, 0.5);
   --console-border: rgba(79, 70, 229, 0.2);
@@ -18,15 +20,18 @@
   --console-success: #10b981;
   --console-highlight-product: rgba(16, 185, 129, 0.15);
   --console-highlight-da: rgba(139, 92, 246, 0.15);
+  --console-card-shadow: none;
 
+  // Light Mode - PRISTINE WHITE
   .light & {
-    --console-bg: #ffffff;
-    --console-surface: #f8fafc;
-    --console-border: rgba(79, 70, 229, 0.15);
-    --console-text: #1e293b;
-    --console-text-secondary: #64748b;
+    --console-bg: #F8FAFC;
+    --console-surface: #FFFFFF;
+    --console-border: #E2E8F0;
+    --console-text: #0F172A;
+    --console-text-secondary: #64748B;
     --console-accent: #4f46e5;
-    --console-accent-glow: rgba(79, 70, 229, 0.15);
+    --console-accent-glow: rgba(79, 70, 229, 0.2);
+    --console-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   }
 }
 
@@ -67,10 +72,7 @@
   border-radius: 16px;
   padding: 20px;
   transition: all 0.3s ease;
-
-  &:hover {
-    border-color: rgba(79, 70, 229, 0.4);
-  }
+  box-shadow: var(--console-card-shadow);
 }
 
 .sectionTitle {
@@ -85,13 +87,13 @@
 // ===== SEGMENTED CONTROL (Resolution Toggle) =====
 .segmentedControl {
   display: flex;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 10px;
   padding: 4px;
   gap: 4px;
 
   .light & {
-    background: rgba(0, 0, 0, 0.05);
+    background: #F1F5F9;
   }
 }
 
@@ -106,11 +108,18 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 
   &:hover:not(.active) {
     color: var(--console-text);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.1);
+
+    .light & {
+      background: #E2E8F0;
+    }
   }
 
   &.active {
@@ -118,6 +127,13 @@
     color: #ffffff;
     box-shadow: 0 4px 12px var(--console-accent-glow);
   }
+}
+
+// Premium Badge
+.premiumBadge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fbbf24;
 }
 
 // ===== ASPECT RATIO BUTTONS =====
@@ -139,15 +155,27 @@
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
+  .light & {
+    background: #FFFFFF;
+  }
+
   &:hover:not(.active) {
     border-color: rgba(79, 70, 229, 0.4);
-    background: rgba(79, 70, 229, 0.05);
+
+    .light & {
+      background: #F8FAFC;
+    }
   }
 
   &.active {
     border-color: var(--console-accent);
     background: rgba(79, 70, 229, 0.1);
     box-shadow: 0 0 20px var(--console-accent-glow);
+
+    .light & {
+      background: rgba(79, 70, 229, 0.05);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
 
     .ratioIcon {
       border-color: var(--console-accent);
@@ -185,117 +213,106 @@
   color: var(--console-text);
 }
 
-// ===== SHOT TYPE CARDS (Multi-select) =====
-.shotTypeGrid {
+// ===== 6-SHOT GRID (Simplified) =====
+.shotGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
   }
 }
 
-.shotTypeCard {
+.shotCard {
   position: relative;
-  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
   border: 2px solid var(--console-border);
   background: transparent;
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  text-align: left;
+
+  .light & {
+    background: #FFFFFF;
+  }
 
   &:hover:not(.active) {
     border-color: rgba(79, 70, 229, 0.4);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
+
+    .light & {
+      background: #F8FAFC;
+    }
   }
 
   &.active {
     border-color: var(--console-accent);
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
-    box-shadow: 0 8px 24px var(--console-accent-glow);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%);
+    box-shadow: 0 4px 16px var(--console-accent-glow);
 
-    .shotTypeIcon {
-      color: var(--console-accent);
+    .light & {
+      background: rgba(79, 70, 229, 0.06);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12), 0 4px 12px rgba(79, 70, 229, 0.1);
     }
 
-    &::before {
-      content: '✓';
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 20px;
-      height: 20px;
-      background: var(--console-accent);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      color: #fff;
+    .shotIcon {
+      color: var(--console-accent);
+      background: rgba(79, 70, 229, 0.15);
     }
   }
 }
 
-.shotTypeIcon {
-  width: 40px;
-  height: 40px;
+.shotIcon {
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
   color: var(--console-text-secondary);
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 
-  svg {
-    width: 28px;
-    height: 28px;
+  .light & {
+    background: #F1F5F9;
   }
 }
 
-.shotTypeName {
+.shotInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shotName {
   font-size: 14px;
   font-weight: 600;
   color: var(--console-text);
 }
 
-.shotTypeDesc {
-  font-size: 11px;
+.shotDesc {
+  font-size: 12px;
   color: var(--console-text-secondary);
 }
 
-// ===== VIEW ANGLE CHIPS =====
-.viewAngleChips {
+.checkMark {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  background: var(--console-accent);
+  border-radius: 50%;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.viewChip {
-  padding: 10px 18px;
-  border: 1.5px solid var(--console-border);
-  background: transparent;
-  border-radius: 24px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--console-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover:not(.active) {
-    border-color: rgba(79, 70, 229, 0.5);
-    color: var(--console-text);
-  }
-
-  &.active {
-    background: var(--console-accent);
-    border-color: var(--console-accent);
-    color: #ffffff;
-    box-shadow: 0 4px 12px var(--console-accent-glow);
-  }
+  align-items: center;
+  justify-content: center;
+  color: #fff;
 }
 
 // ===== RIGHT PANEL - PREVIEW =====
@@ -308,10 +325,15 @@
 
 // ===== ORDER SUMMARY CARD =====
 .summaryCard {
-  background: linear-gradient(135deg, var(--console-surface) 0%, rgba(79, 70, 229, 0.08) 100%);
+  background: linear-gradient(135deg, var(--console-surface) 0%, rgba(79, 70, 229, 0.06) 100%);
   border: 1px solid var(--console-border);
   border-radius: 16px;
   padding: 24px;
+  box-shadow: var(--console-card-shadow);
+
+  .light & {
+    background: linear-gradient(135deg, #FFFFFF 0%, rgba(79, 70, 229, 0.04) 100%);
+  }
 }
 
 .summaryTitle {
@@ -345,6 +367,14 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  box-shadow: var(--console-card-shadow);
+}
+
+.promptPreviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .promptPreviewTitle {
@@ -353,10 +383,56 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--console-text-secondary);
-  margin: 0 0 12px 0;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.editButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--console-border);
+  background: transparent;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--console-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  .light & {
+    background: #FFFFFF;
+  }
+
+  &:hover {
+    border-color: var(--console-accent);
+    color: var(--console-accent);
+  }
+}
+
+.promptTextarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--console-border);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--console-text);
+  resize: vertical;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--console-accent);
+  }
+
+  .light & {
+    background: #F8FAFC;
+  }
 }
 
 .promptPreviewText {
@@ -371,6 +447,11 @@
     padding: 2px 6px;
     border-radius: 4px;
     font-weight: 500;
+
+    .light & {
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+    }
   }
 
   .daHighlight {
@@ -379,6 +460,11 @@
     padding: 2px 6px;
     border-radius: 4px;
     font-weight: 500;
+
+    .light & {
+      background: rgba(139, 92, 246, 0.12);
+      color: #7c3aed;
+    }
   }
 }
 
@@ -391,10 +477,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  .light & {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%);
+    border-color: rgba(16, 185, 129, 0.25);
+  }
+}
+
+.costInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .costLabel {
   font-size: 14px;
+  color: var(--console-text-secondary);
+  margin: 0;
+}
+
+.costBreakdown {
+  font-size: 12px;
   color: var(--console-text-secondary);
   margin: 0;
 }
@@ -404,6 +507,10 @@
   font-weight: 700;
   color: var(--console-success);
   margin: 0;
+
+  .light & {
+    color: #059669;
+  }
 }
 
 // ===== ACTION BAR =====
@@ -430,6 +537,10 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+
+  .light & {
+    background: #FFFFFF;
+  }
 
   &:hover {
     border-color: var(--console-text-secondary);
@@ -468,120 +579,3 @@
     background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
   }
 }
-
-// ===== NEW ELEMENTS =====
-
-// Premium Badge (4K +50%)
-.premiumBadge {
-  font-size: 10px;
-  font-weight: 600;
-  color: #fbbf24;
-  margin-left: 6px;
-}
-
-// View Hint
-.viewHint {
-  font-size: 11px;
-  color: var(--console-text-secondary);
-  margin: 12px 0 0 0;
-  font-style: italic;
-}
-
-// Chip Badge (×2)
-.chipBadge {
-  font-size: 10px;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 6px;
-  border-radius: 10px;
-  margin-left: 6px;
-}
-
-// Summary Breakdown
-.summaryBreakdown {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--console-border);
-  font-size: 14px;
-  color: var(--console-text-secondary);
-
-  .separator {
-    color: var(--console-accent);
-    font-weight: 600;
-  }
-
-  .total {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--console-accent);
-  }
-}
-
-// Prompt Preview Header
-.promptPreviewHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-// Edit Button
-.editButton {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid var(--console-border);
-  background: transparent;
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--console-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: var(--console-accent);
-    color: var(--console-accent);
-  }
-}
-
-// Prompt Textarea
-.promptTextarea {
-  width: 100%;
-  min-height: 120px;
-  padding: 12px;
-  border: 1px solid var(--console-border);
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--console-text);
-  resize: vertical;
-  font-family: inherit;
-
-  &:focus {
-    outline: none;
-    border-color: var(--console-accent);
-  }
-
-  .light & {
-    background: rgba(0, 0, 0, 0.03);
-  }
-}
-
-// Cost Info
-.costInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.costBreakdown {
-  font-size: 12px;
-  color: var(--console-text-secondary);
-  margin: 0;
-}
-

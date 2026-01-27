@@ -10,7 +10,9 @@ import {
     Box,
     Maximize2,
     Pencil,
-    Check
+    Check,
+    Camera,
+    Layers
 } from 'lucide-react';
 import styles from '@/scss/styles/HomePage/ProductStep3.module.scss';
 import { ProductAnalysis } from './ProductStep2_Analysis';
@@ -41,20 +43,15 @@ interface ProductStep3Props {
     isGenerating: boolean;
 }
 
-// Shot Types - Backend mapping
+// ===== THE 6-SHOT SYSTEM =====
+// Exactly 6 selectable shot types - NO matrix, NO complexity
 const SHOT_TYPES = [
-    { id: 'DUO', name: 'Duo Shot', desc: 'Father + Son', icon: Users },
-    { id: 'SOLO', name: 'Solo Shot', desc: 'Male Model', icon: User },
-    { id: 'FLAT', name: 'Flat Lay', desc: 'Ghost Mannequin', icon: Box },
-] as const;
-
-// View Angles - with Backend mapping
-// Close-up maps to BOTH FCLOSE and BCLOSE
-const VIEW_ANGLES = [
-    { id: 'FRONT', name: 'Front', backendCodes: ['F'] },
-    { id: 'BACK', name: 'Back', backendCodes: ['B'] },
-    { id: 'CLOSEUP', name: 'Close-up', backendCodes: ['FCLOSE', 'BCLOSE'] }, // Batch group
-    { id: 'FLATLAY', name: 'Flatlay', backendCodes: ['FFLAT'] },
+    { id: 'DUO', name: 'Duo', desc: 'Father & Son', icon: Users },
+    { id: 'SOLO', name: 'Solo', desc: 'Male Model', icon: User },
+    { id: 'FLAT_F', name: 'Flatlay', desc: 'Front', icon: Box },
+    { id: 'FLAT_B', name: 'Flatlay', desc: 'Angled/Back', icon: Layers },
+    { id: 'CLOSE_F', name: 'Detail', desc: 'Front', icon: Camera },
+    { id: 'CLOSE_B', name: 'Detail', desc: 'Back', icon: Camera },
 ] as const;
 
 // Aspect Ratios
@@ -64,14 +61,12 @@ const ASPECT_RATIOS = [
     { id: '9:16', name: '9:16', className: 'story' },
 ] as const;
 
-// Cost per variation
-const COST_PER_VARIATION = 2;
+// Cost per shot
+const COST_PER_SHOT = 2;
 
 const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
     productAnalysis,
     daAnalysis,
-    mergedPrompts,
-    onPromptsChange,
     onBack,
     onGenerate,
     isGenerating,
@@ -82,21 +77,16 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
     // Aspect Ratio: Single select - Default: 4:5
     const [aspectRatio, setAspectRatio] = useState<string>('4:5');
 
-    // Shot Types: Multi-select - Default: ALL selected
+    // Shot Types: ALL 6 selected by default
     const [selectedShots, setSelectedShots] = useState<Set<string>>(
         new Set(SHOT_TYPES.map(s => s.id))
-    );
-
-    // View Angles: Multi-select - Default: ALL selected
-    const [selectedViews, setSelectedViews] = useState<Set<string>>(
-        new Set(VIEW_ANGLES.map(v => v.id))
     );
 
     // Prompt editing state
     const [isEditingPrompt, setIsEditingPrompt] = useState(false);
     const [editedPrompt, setEditedPrompt] = useState('');
 
-    // Toggle shot type (multi-select)
+    // Toggle shot type (multi-select, min 1)
     const toggleShot = (shotId: string) => {
         setSelectedShots(prev => {
             const next = new Set(prev);
@@ -110,73 +100,42 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
         });
     };
 
-    // Toggle view angle (multi-select)
-    const toggleView = (viewId: string) => {
-        setSelectedViews(prev => {
-            const next = new Set(prev);
-            if (next.has(viewId)) {
-                // Don't allow deselecting if it's the last one
-                if (next.size > 1) next.delete(viewId);
-            } else {
-                next.add(viewId);
-            }
-            return next;
-        });
-    };
-
-    // Calculate total backend codes for variations
-    const totalBackendViews = useMemo(() => {
-        let count = 0;
-        VIEW_ANGLES.forEach(view => {
-            if (selectedViews.has(view.id)) {
-                count += view.backendCodes.length;
-            }
-        });
-        return count;
-    }, [selectedViews]);
-
-    // Calculate total variations (shots × views)
-    const totalVariations = useMemo(() => {
-        return selectedShots.size * totalBackendViews;
-    }, [selectedShots, totalBackendViews]);
+    // Total = number of selected shots (1-6)
+    const totalShots = selectedShots.size;
 
     // Calculate total cost
     const totalCost = useMemo(() => {
-        const baseCost = totalVariations * COST_PER_VARIATION;
+        const baseCost = totalShots * COST_PER_SHOT;
         // 4K costs 1.5x more
         return resolution === '4K' ? Math.ceil(baseCost * 1.5) : baseCost;
-    }, [totalVariations, resolution]);
+    }, [totalShots, resolution]);
 
-    // Generate example prompt with highlighting
+    // Generate example prompt
     const examplePrompt = useMemo(() => {
-        const shotType = Array.from(selectedShots)[0] || 'DUO';
-
-        // Build the example prompt text
         const productPart = `${productAnalysis.color} ${productAnalysis.type} made of ${productAnalysis.material}`;
         const detailsPart = productAnalysis.details;
         const daPart = `${daAnalysis.background} setting with ${daAnalysis.lighting} lighting, ${daAnalysis.mood} mood`;
 
-        let modelDesc = '';
-        if (shotType === 'DUO') modelDesc = 'Father and son models wearing matching outfits';
-        else if (shotType === 'SOLO') modelDesc = 'Single male model in professional pose';
-        else modelDesc = 'Product displayed on ghost mannequin';
-
-        return { productPart, detailsPart, daPart, modelDesc };
-    }, [selectedShots, productAnalysis, daAnalysis]);
+        return { productPart, detailsPart, daPart };
+    }, [productAnalysis, daAnalysis]);
 
     // Initialize edited prompt
     React.useEffect(() => {
-        const fullPrompt = `A ${examplePrompt.productPart} with ${examplePrompt.detailsPart}. Shot in ${examplePrompt.daPart}. ${examplePrompt.modelDesc}.`;
+        const fullPrompt = `A ${examplePrompt.productPart} with ${examplePrompt.detailsPart}. Shot in ${examplePrompt.daPart}.`;
         setEditedPrompt(fullPrompt);
     }, [examplePrompt]);
 
     // Can generate?
-    const canGenerate = totalVariations > 0;
+    const canGenerate = totalShots > 0;
 
     // Handle prompt save
     const handleSavePrompt = () => {
         setIsEditingPrompt(false);
-        // Here you could call onPromptsChange if needed
+    };
+
+    // Handle back navigation
+    const handleBack = () => {
+        onBack();
     };
 
     return (
@@ -230,10 +189,10 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                         </div>
                     </div>
 
-                    {/* Shot Types Section */}
+                    {/* ===== THE 6-SHOT SELECTION ===== */}
                     <div className={styles.sectionCard}>
-                        <h4 className={styles.sectionTitle}>Shot Types</h4>
-                        <div className={styles.shotTypeGrid}>
+                        <h4 className={styles.sectionTitle}>Shot Types ({totalShots} selected)</h4>
+                        <div className={styles.shotGrid}>
                             <AnimatePresence>
                                 {SHOT_TYPES.map(shot => {
                                     const Icon = shot.icon;
@@ -243,45 +202,31 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                                             key={shot.id}
                                             whileTap={{ scale: 0.95 }}
                                             layout
-                                            className={`${styles.shotTypeCard} ${isActive ? styles.active : ''}`}
+                                            className={`${styles.shotCard} ${isActive ? styles.active : ''}`}
                                             onClick={() => toggleShot(shot.id)}
                                         >
-                                            <div className={styles.shotTypeIcon}>
-                                                <Icon size={28} />
+                                            <div className={styles.shotIcon}>
+                                                <Icon size={24} />
                                             </div>
-                                            <span className={styles.shotTypeName}>{shot.name}</span>
-                                            <span className={styles.shotTypeDesc}>{shot.desc}</span>
+                                            <div className={styles.shotInfo}>
+                                                <span className={styles.shotName}>{shot.name}</span>
+                                                <span className={styles.shotDesc}>{shot.desc}</span>
+                                            </div>
+                                            {isActive && (
+                                                <motion.div
+                                                    className={styles.checkMark}
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    exit={{ scale: 0 }}
+                                                >
+                                                    <Check size={12} />
+                                                </motion.div>
+                                            )}
                                         </motion.button>
                                     );
                                 })}
                             </AnimatePresence>
                         </div>
-                    </div>
-
-                    {/* View Angles Section */}
-                    <div className={styles.sectionCard}>
-                        <h4 className={styles.sectionTitle}>View Angles</h4>
-                        <div className={styles.viewAngleChips}>
-                            {VIEW_ANGLES.map(view => {
-                                const isActive = selectedViews.has(view.id);
-                                return (
-                                    <motion.button
-                                        key={view.id}
-                                        whileTap={{ scale: 0.95 }}
-                                        className={`${styles.viewChip} ${isActive ? styles.active : ''}`}
-                                        onClick={() => toggleView(view.id)}
-                                    >
-                                        {view.name}
-                                        {view.id === 'CLOSEUP' && (
-                                            <span className={styles.chipBadge}>×2</span>
-                                        )}
-                                    </motion.button>
-                                );
-                            })}
-                        </div>
-                        <p className={styles.viewHint}>
-                            *Close-up generates both front and back detail shots
-                        </p>
                     </div>
                 </div>
 
@@ -294,17 +239,10 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                     >
                         <h5 className={styles.summaryTitle}>Generation Summary</h5>
                         <p className={styles.summaryText}>
-                            Generating <span className={styles.highlight}>{totalVariations} Variations</span> in{' '}
-                            <span className={styles.highlight}>{aspectRatio}</span> aspect ratio at{' '}
-                            <span className={styles.highlight}>{resolution}</span> resolution.
+                            Generating <span className={styles.highlight}>{totalShots} Images</span> in{' '}
+                            <span className={styles.highlight}>{aspectRatio}</span> at{' '}
+                            <span className={styles.highlight}>{resolution}</span>
                         </p>
-                        <div className={styles.summaryBreakdown}>
-                            <span>{selectedShots.size} Shot Types</span>
-                            <span className={styles.separator}>×</span>
-                            <span>{totalBackendViews} Angles</span>
-                            <span className={styles.separator}>=</span>
-                            <span className={styles.total}>{totalVariations}</span>
-                        </div>
                     </motion.div>
 
                     {/* Prompt Preview */}
@@ -312,7 +250,7 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                         <div className={styles.promptPreviewHeader}>
                             <h5 className={styles.promptPreviewTitle}>
                                 <Sparkles size={14} />
-                                Example Prompt Preview
+                                Prompt Preview
                             </h5>
                             <button
                                 className={styles.editButton}
@@ -334,8 +272,7 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                             <p className={styles.promptPreviewText}>
                                 A <span className={styles.productHighlight}>{examplePrompt.productPart}</span> with{' '}
                                 <span className={styles.productHighlight}>{examplePrompt.detailsPart}</span>.{' '}
-                                Shot in <span className={styles.daHighlight}>{examplePrompt.daPart}</span>.{' '}
-                                {examplePrompt.modelDesc}.
+                                Shot in <span className={styles.daHighlight}>{examplePrompt.daPart}</span>.
                             </p>
                         )}
                     </div>
@@ -345,8 +282,8 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                         <div className={styles.costInfo}>
                             <p className={styles.costLabel}>Total Cost</p>
                             <p className={styles.costBreakdown}>
-                                {totalVariations} × {COST_PER_VARIATION} credits
-                                {resolution === '4K' && ' (+50% for 4K)'}
+                                {totalShots} shots × {COST_PER_SHOT} credits
+                                {resolution === '4K' && ' (+50%)'}
                             </p>
                         </div>
                         <p className={styles.costValue}>{totalCost} Credits</p>
@@ -356,7 +293,7 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
 
             {/* Action Bar */}
             <div className={styles.step3ActionBar}>
-                <button className={styles.backButton} onClick={onBack}>
+                <button className={styles.backButton} onClick={handleBack}>
                     <ArrowLeft size={18} />
                     Back
                 </button>
@@ -381,7 +318,7 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                     ) : (
                         <>
                             <Maximize2 size={18} />
-                            Generate Batch
+                            Generate {totalShots} Images
                         </>
                     )}
                 </motion.button>
