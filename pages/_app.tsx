@@ -24,10 +24,14 @@ export default function App({ Component, pageProps }: AppProps) {
     setIsHydrated(true);
   }, []);
 
-  // Theme o'zgarganda localStorage-ga saqlash
+  // Theme o'zgarganda localStorage-ga saqlash va body-ga class qo'shish
   useEffect(() => {
     if (isHydrated) {
       localStorage.setItem(THEME_STORAGE_KEY, mode);
+      // Body-ga data-theme va class qo'shish
+      document.body.setAttribute('data-theme', mode);
+      document.body.classList.remove('light', 'dark');
+      document.body.classList.add(mode);
     }
   }, [mode, isHydrated]);
 

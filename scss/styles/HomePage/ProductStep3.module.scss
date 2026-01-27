@@ -1,52 +1,47 @@
 // ===== STEP 3: Visual Generation Console =====
-// Fashion brand egalari uchun intuitiv batch generation UI
-// 6-Shot System + Apple-style Light Mode
+// 6-Shot System + Paper White Light Mode
+// Using body.light and body[data-theme='light'] selectors
 
-// ===== CSS VARIABLES =====
+// ===== DARK MODE DEFAULTS =====
 .step3Container {
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 20px;
 
-  // ===== DARK MODE (Default) =====
+  // Dark Mode Variables
   --bg-page: rgba(15, 23, 42, 0.6);
-  --bg-surface: rgba(30, 41, 59, 0.5);
-  --bg-element: rgba(255, 255, 255, 0.05);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-inverse: #ffffff;
-  --border-default: rgba(79, 70, 229, 0.2);
+  --bg-card: rgba(30, 41, 59, 0.5);
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --text-main: #f8fafc;
+  --text-sub: #94a3b8;
+  --border-color: rgba(79, 70, 229, 0.2);
   --border-active: #6366F1;
-  --active-item-bg: rgba(79, 70, 229, 0.15);
+  --accent-bg: rgba(79, 70, 229, 0.15);
   --accent: #4f46e5;
   --accent-glow: rgba(79, 70, 229, 0.3);
   --success: #10b981;
-  --highlight-product: rgba(16, 185, 129, 0.15);
-  --highlight-da: rgba(139, 92, 246, 0.15);
   --shadow-card: none;
 }
 
-// ===== LIGHT MODE - PRISTINE WHITE (Apple Style) =====
-:global(.light) .step3Container {
-  --bg-page: #F8FAFC;
-  --bg-surface: #FFFFFF;
-  --bg-element: #F1F5F9;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-inverse: #FFFFFF;
-  --border-default: #E2E8F0;
-  --border-active: #6366F1;
-  --active-item-bg: #EEF2FF;
-  --accent: #4f46e5;
-  --accent-glow: rgba(99, 102, 241, 0.25);
-  --success: #059669;
-  --highlight-product: rgba(16, 185, 129, 0.12);
-  --highlight-da: rgba(139, 92, 246, 0.12);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+// ===== LIGHT MODE - PAPER WHITE =====
+:global(body.light) .step3Container,
+:global(body[data-theme='light']) .step3Container {
+  --bg-page: #FFFFFF !important;
+  --bg-card: #FFFFFF !important;
+  --bg-input: #F1F5F9 !important;
+  --text-main: #020617 !important;
+  --text-sub: #475569 !important;
+  --border-color: #E2E8F0 !important;
+  --border-active: #4F46E5 !important;
+  --accent-bg: #EEF2FF !important;
+  --accent: #4F46E5 !important;
+  --accent-glow: rgba(79, 70, 229, 0.25) !important;
+  --success: #059669 !important;
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
 }
 
-// ===== SPLIT LAYOUT =====
+// ===== LAYOUT =====
 .consoleLayout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -60,7 +55,6 @@
   }
 }
 
-// ===== LEFT PANEL - CONTROLS =====
 .controlsPanel {
   display: flex;
   flex-direction: column;
@@ -72,17 +66,17 @@
     width: 4px;
   }
   &::-webkit-scrollbar-thumb {
-    background: var(--border-default);
+    background: var(--border-color);
     border-radius: 2px;
   }
 }
 
+// ===== SECTION CARD =====
 .sectionCard {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 20px;
-  transition: all 0.3s ease;
   box-shadow: var(--shadow-card);
 }
 
@@ -91,14 +85,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-secondary);
+  color: var(--text-sub);
   margin: 0 0 16px 0;
 }
 
-// ===== SEGMENTED CONTROL (Resolution Toggle) =====
+// ===== SEGMENTED CONTROL =====
 .segmentedControl {
   display: flex;
-  background: var(--bg-element);
+  background: var(--bg-input);
   border-radius: 10px;
   padding: 4px;
   gap: 4px;
@@ -109,37 +103,35 @@
   padding: 10px 16px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-sub);
   font-size: 14px;
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
 
   &:hover:not(.active) {
-    color: var(--text-primary);
-    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-main);
   }
 
   &.active {
-    background: var(--accent);
-    color: var(--text-inverse);
+    background: var(--accent) !important;
+    color: #FFFFFF !important;
     box-shadow: 0 2px 8px var(--accent-glow);
   }
 }
 
-// Premium Badge
 .premiumBadge {
   font-size: 10px;
   font-weight: 600;
   color: #fbbf24;
 }
 
-// ===== ASPECT RATIO BUTTONS =====
+// ===== RATIO BUTTONS =====
 .ratioOptions {
   display: flex;
   gap: 12px;
@@ -152,21 +144,20 @@
   align-items: center;
   gap: 8px;
   padding: 16px 12px;
-  border: 2px solid var(--border-default);
-  background: var(--bg-surface);
+  border: 2px solid var(--border-color);
+  background-color: var(--bg-card) !important;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 
   &:hover:not(.active) {
     border-color: #A5B4FC;
-    background: var(--bg-element);
   }
 
   &.active {
-    border-color: var(--border-active);
-    background: var(--active-item-bg);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    border-color: var(--border-active) !important;
+    background-color: var(--accent-bg) !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 
     .ratioIcon {
       border-color: var(--accent);
@@ -177,9 +168,9 @@
 .ratioIcon {
   width: 32px;
   height: 40px;
-  border: 2px solid var(--text-secondary);
+  border: 2px solid var(--text-sub);
   border-radius: 4px;
-  transition: all 0.2s ease;
+  background: transparent;
 
   &.square {
     width: 32px;
@@ -200,10 +191,10 @@
 .ratioLabel {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
-// ===== 6-SHOT GRID (Simplified) =====
+// ===== SHOT GRID =====
 .shotGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -220,27 +211,26 @@
   align-items: center;
   gap: 14px;
   padding: 16px;
-  border: 2px solid var(--border-default);
-  background: var(--bg-surface);
+  border: 2px solid var(--border-color);
+  background-color: var(--bg-card) !important;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   text-align: left;
 
   &:hover:not(.active) {
     border-color: #A5B4FC;
-    background: var(--bg-element);
     transform: translateY(-1px);
   }
 
   &.active {
-    border-color: var(--border-active);
-    background: var(--active-item-bg);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12), 0 4px 12px rgba(99, 102, 241, 0.1);
+    border-color: var(--border-active) !important;
+    background-color: var(--accent-bg) !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12), 0 4px 12px rgba(79, 70, 229, 0.1);
 
     .shotIcon {
       color: var(--accent);
-      background: rgba(99, 102, 241, 0.15);
+      background: rgba(79, 70, 229, 0.15);
     }
   }
 }
@@ -252,9 +242,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: var(--bg-element);
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
+  background: var(--bg-input);
+  color: var(--text-sub);
   flex-shrink: 0;
 }
 
@@ -267,12 +256,12 @@
 .shotName {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .shotDesc {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--text-sub);
 }
 
 .checkMark {
@@ -289,7 +278,7 @@
   color: #fff;
 }
 
-// ===== RIGHT PANEL - PREVIEW =====
+// ===== RIGHT PANEL =====
 .previewPanel {
   display: flex;
   flex-direction: column;
@@ -297,10 +286,10 @@
   overflow-y: auto;
 }
 
-// ===== ORDER SUMMARY CARD =====
+// ===== SUMMARY CARD =====
 .summaryCard {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 24px;
   box-shadow: var(--shadow-card);
@@ -318,7 +307,7 @@
 .summaryText {
   font-size: 20px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
   margin: 0;
   line-height: 1.4;
 
@@ -328,10 +317,10 @@
   }
 }
 
-// ===== PROMPT PREVIEW CARD =====
+// ===== PROMPT PREVIEW =====
 .promptPreviewCard {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 20px;
   flex: 1;
@@ -352,7 +341,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-secondary);
+  color: var(--text-sub);
   margin: 0;
   display: flex;
   align-items: center;
@@ -364,13 +353,12 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
   border-radius: 6px;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--text-sub);
   cursor: pointer;
-  transition: all 0.2s ease;
 
   &:hover {
     border-color: var(--accent);
@@ -382,12 +370,12 @@
   width: 100%;
   min-height: 120px;
   padding: 12px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-element);
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
   border-radius: 8px;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-primary);
+  color: var(--text-main);
   resize: vertical;
   font-family: inherit;
 
@@ -400,11 +388,11 @@
 .promptPreviewText {
   font-size: 14px;
   line-height: 1.7;
-  color: var(--text-primary);
+  color: var(--text-main);
   margin: 0;
 
   .productHighlight {
-    background: var(--highlight-product);
+    background: rgba(16, 185, 129, 0.15);
     color: #059669;
     padding: 2px 6px;
     border-radius: 4px;
@@ -412,7 +400,7 @@
   }
 
   .daHighlight {
-    background: var(--highlight-da);
+    background: rgba(139, 92, 246, 0.15);
     color: #7c3aed;
     padding: 2px 6px;
     border-radius: 4px;
@@ -422,7 +410,7 @@
 
 // ===== COST CARD =====
 .costCard {
-  background: var(--bg-surface);
+  background-color: var(--bg-card) !important;
   border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 12px;
   padding: 16px 20px;
@@ -440,13 +428,13 @@
 
 .costLabel {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-sub);
   margin: 0;
 }
 
 .costBreakdown {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--text-sub);
   margin: 0;
 }
 
@@ -460,7 +448,7 @@
 // ===== ACTION BAR =====
 .step3ActionBar {
   padding-top: 16px;
-  border-top: 1px solid var(--border-default);
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -473,18 +461,17 @@
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
   border-radius: 10px;
-  color: var(--text-secondary);
+  color: var(--text-sub);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
 
   &:hover {
-    border-color: var(--text-secondary);
-    color: var(--text-primary);
+    border-color: var(--text-sub);
+    color: var(--text-main);
   }
 }
 
@@ -495,11 +482,10 @@
   border: none;
   background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
   border-radius: 12px;
-  color: var(--text-inverse);
+  color: #FFFFFF;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
