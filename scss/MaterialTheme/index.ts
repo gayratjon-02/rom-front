@@ -8,20 +8,21 @@ import typography from './typography';
 export const light = {
 	palette: {
 		type: 'light',
+		mode: 'light',
 		background: {
-			default: '#f4f6f8',
-			paper: common.white,
+			default: '#ffffff',
+			paper: '#ffffff',
 		},
 		primary: {
 			contrastText: '#ffffff',
-			main: '#E92C28',
+			main: '#4f46e5',
 		},
 		secondary: {
-			main: '#1646C1',
+			main: '#8b85ff',
 		},
 		text: {
-			primary: '#212121',
-			secondary: '#616161',
+			primary: '#1a1a1a',
+			secondary: 'rgba(0, 0, 0, 0.7)',
 			dark: common.black,
 		},
 	},
@@ -311,20 +312,21 @@ export const light = {
 export const dark = {
 	palette: {
 		type: 'dark',
+		mode: 'dark',
 		background: {
-			default: '#151719', // Dark background matching HomeTop
-			paper: '#1e2124',
+			default: '#1a1a1a', // Dark background matching HomeLeft and HomeTop
+			paper: '#1a1a1a',
 		},
 		primary: {
 			contrastText: '#ffffff',
-			main: '#E92C28',
+			main: '#4f46e5',
 		},
 		secondary: {
-			main: '#1646C1',
+			main: '#8b85ff',
 		},
 		text: {
 			primary: '#ffffff',
-			secondary: '#b0b3b8',
+			secondary: 'rgba(255, 255, 255, 0.7)',
 			dark: common.white,
 		},
 	},
@@ -333,7 +335,7 @@ export const dark = {
         MuiCssBaseline: {
 			styleOverrides: {
 				html: { height: '100%' },
-				body: { background: '#151719', height: '100%', minHeight: '100%', color: '#fff' },
+				body: { background: '#1a1a1a', height: '100%', minHeight: '100%', color: '#fff' },
 				p: { margin: '0' },
 			},
 		},
@@ -342,14 +344,14 @@ export const dark = {
 				root: {
 					height: '48px',
 					width: '100%',
-					backgroundColor: '#2a2d31', // Darker input bg
+					backgroundColor: 'rgba(255, 255, 255, 0.05)',
                     color: '#fff',
 					input: {},
 				},
 				notchedOutline: {
 					padding: '8px',
 					top: '-9px',
-					border: '1px solid #3b3e4a',
+					border: '1px solid rgba(255, 255, 255, 0.1)',
 				},
 			},
 		},
