@@ -29,12 +29,7 @@ interface HomeMiddleProps {
     selectedBrand?: Brand | null;
 }
 
-interface MergedPrompts {
-    main_visual: string;
-    lifestyle: string;
-    detail_shots: string;
-    model_poses: string;
-}
+type MergedPrompts = Record<string, string>;
 
 interface VisualOutput {
     type: string;
@@ -225,15 +220,25 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             setGenerationId(generation.id);
 
             // Generate merged prompts from product + DA
+            // Generate merged prompts for 6-shot system
             const product = productAnalysis;
-            const da = mockDAAnalysis;
+            const da = mockDAAnalysis; // In real app, this would be selected DA
 
-            setMergedPrompts({
-                main_visual: `A ${product.type} in ${product.color} ${product.material} with ${product.details}. ${product.logo_front} on front. Photographed with ${da.lighting}. ${da.background}. ${da.mood} aesthetic.`,
-                lifestyle: `Fashion editorial featuring ${product.type} in ${product.color}. Model in natural pose with ${da.props_decor}. ${da.lighting}. Cinematic depth of field.`,
-                detail_shots: `Close-up product photography: ${product.material} texture, ${product.details}. ${da.lighting}. Clean white background.`,
-                model_poses: `Full body shot: ${product.type} styled casually. Model facing camera, hands in pockets. ${da.background}. ${da.composition}.`,
-            });
+            const basePrompt = `A ${product.type} in ${product.color} ${product.material}. ${product.details}. ${da.lighting}. ${da.background}. ${da.mood} aesthetic.`;
+
+            const initialPrompts: MergedPrompts = {
+                DUO: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
+                SOLO: `Male Model solo shot. ${basePrompt} Professional pose.`,
+                FLAT_F: `Flatlay front view. ${basePrompt} Clean arrangement.`,
+                FLAT_B: `Flatlay angled back view. ${basePrompt} Detail focus.`,
+                CLOSE_F: `Close-up detail front. Focus on ${product.material} texture and ${product.logo_front}.`,
+                CLOSE_B: `Close-up detail back. Focus on features and ${product.logo_back}.`,
+            };
+
+            // Save prompts to backend immediately
+            await updatePromptsAPI(generation.id, { prompts: initialPrompts });
+
+            setMergedPrompts(initialPrompts);
             setCurrentStep(3);
         } catch (error) {
             console.error('Failed to create generation:', error);
@@ -257,7 +262,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
         });
     }, [generationId]);
 
-    const handleGenerate = useCallback(async () => {
+    const handleGenerate = useCallback(async (visualTypes: string[]) => {
         if (!generationId) {
             alert('Generation ID not found. Please try again.');
             return;
@@ -267,9 +272,9 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
         setCurrentStep(4);
 
         try {
-            // Start generation on the backend
+            // Start generation on the backend with selected shots
             await startGeneration(generationId, {
-                visualTypes: ['main_visual', 'lifestyle', 'detail_front', 'detail_back', 'model_pose_1', 'model_pose_2'],
+                visualTypes: visualTypes,
             });
 
             // Poll for progress updates

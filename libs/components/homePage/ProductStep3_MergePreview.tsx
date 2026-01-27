@@ -26,20 +26,16 @@ interface DAAnalysis {
     mood: string;
 }
 
-interface MergedPrompts {
-    main_visual: string;
-    lifestyle: string;
-    detail_shots: string;
-    model_poses: string;
-}
+type MergedPrompts = Record<string, string>;
 
 interface ProductStep3Props {
     productAnalysis: ProductAnalysis;
     daAnalysis: DAAnalysis;
     mergedPrompts: MergedPrompts;
     onPromptsChange: (key: keyof MergedPrompts, value: string) => void;
+    onPromptsChange: (key: keyof MergedPrompts, value: string) => void;
     onBack: () => void;
-    onGenerate: () => void;
+    onGenerate: (selectedShots: string[]) => void;
     isGenerating: boolean;
 }
 
@@ -302,7 +298,7 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
                     whileHover={{ scale: canGenerate ? 1.02 : 1 }}
                     whileTap={{ scale: canGenerate ? 0.98 : 1 }}
                     className={`${styles.generateButton} ${isGenerating ? styles.generating : ''}`}
-                    onClick={onGenerate}
+                    onClick={() => onGenerate(Array.from(selectedShots))}
                     disabled={!canGenerate || isGenerating}
                 >
                     {isGenerating ? (
