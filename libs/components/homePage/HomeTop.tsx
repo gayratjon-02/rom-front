@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { useTheme } from "@mui/material";
 import FolderIcon from '@mui/icons-material/Folder';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -11,64 +11,104 @@ import DownloadIcon from '@mui/icons-material/Download';
 import HistoryIcon from '@mui/icons-material/History';
 import styles from "@/scss/styles/HomePage/HomeTop.module.scss";
 import { ColorModeContext } from "@/pages/_app";
+import CreateCollectionModal from '@/libs/components/modals/CreateCollectionModal';
+import CreateBrandModal from '@/libs/components/modals/CreateBrandModal';
 
 const HomeTop = () => {
     const theme = useTheme();
     const colorMode = useContext(ColorModeContext);
+    const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+    const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+
+    const handleOpenCollectionModal = () => {
+        setIsCollectionModalOpen(true);
+    };
+
+    const handleCloseCollectionModal = () => {
+        setIsCollectionModalOpen(false);
+    };
+
+    const handleOpenBrandModal = () => {
+        setIsCollectionModalOpen(false);
+        setIsBrandModalOpen(true);
+    };
+
+    const handleCloseBrandModal = () => {
+        setIsBrandModalOpen(false);
+    };
+
+    const handleBackToCollection = () => {
+        setIsBrandModalOpen(false);
+        setIsCollectionModalOpen(true);
+    };
 
     return (
-        <div className={`${styles.container} ${styles[theme.palette.mode]}`}>
-            {/* Left: Navigation & Context */}
-            <div className={styles.leftSection}>
-                {/* Tab Group */}
-                <div className={styles.tabGroup}>
-                    <button className={`${styles.tab} ${styles.active}`}>Product Visuals</button>
-                    <button className={styles.tab}>Ad Recreation</button>
+        <>
+            <div className={`${styles.container} ${styles[theme.palette.mode]}`}>
+                {/* Left: Navigation & Context */}
+                <div className={styles.leftSection}>
+                    {/* Tab Group */}
+                    <div className={styles.tabGroup}>
+                        <button className={`${styles.tab} ${styles.active}`}>Product Visuals</button>
+                        <button className={styles.tab}>Ad Recreation</button>
+                    </div>
+
+                    {/* Dropdown Context - Opens Collection Modal */}
+                    <div className={styles.dropdown} onClick={handleOpenCollectionModal}>
+                        <FolderIcon fontSize="small" />
+                        <span>Collection</span>
+                        <ArrowDropDownIcon fontSize="small" />
+                    </div>
+
+                    {/* Style Set Button */}
+                    <div className={styles.styleSetButton}>
+                        <span>Style Set</span>
+                    </div>
                 </div>
 
-                {/* Dropdown Context */}
-                <div className={styles.dropdown}>
-                    <FolderIcon fontSize="small" />
-                    <span>Urban</span>
-                    <ArrowDropDownIcon fontSize="small" />
-                </div>
+                {/* Right: Actions */}
+                <div className={styles.rightSection}>
+                    {/* Theme Toggle */}
+                    <div
+                        className={`${styles.iconButton} ${styles.highlight}`}
+                        onClick={colorMode.toggleColorMode}
+                    >
+                        {theme.palette.mode === 'dark' ? (
+                            <WbSunnyIcon fontSize="small" />
+                        ) : (
+                            <NightlightRoundIcon fontSize="small" />
+                        )}
+                    </div>
 
-                {/* Style Set Button */}
-                <div className={styles.styleSetButton}>
-                    <span>Style Set</span>
+                    {/* Fullscreen */}
+                    <div className={styles.iconButton}>
+                        <FullscreenIcon fontSize="small" />
+                    </div>
+
+                    {/* Download */}
+                    <div className={styles.iconButton}>
+                        <DownloadIcon fontSize="small" />
+                    </div>
+
+                    {/* History */}
+                    <div className={styles.iconButton}>
+                        <HistoryIcon fontSize="small" />
+                    </div>
                 </div>
             </div>
 
-            {/* Right: Actions */}
-            <div className={styles.rightSection}>
-                {/* Theme Toggle */}
-                <div
-                    className={`${styles.iconButton} ${styles.highlight}`}
-                    onClick={colorMode.toggleColorMode}
-                >
-                    {theme.palette.mode === 'dark' ? (
-                        <WbSunnyIcon fontSize="small" />
-                    ) : (
-                        <NightlightRoundIcon fontSize="small" />
-                    )}
-                </div>
-
-                {/* Fullscreen */}
-                <div className={styles.iconButton}>
-                    <FullscreenIcon fontSize="small" />
-                </div>
-
-                {/* Download */}
-                <div className={styles.iconButton}>
-                    <DownloadIcon fontSize="small" />
-                </div>
-
-                {/* History */}
-                <div className={styles.iconButton}>
-                    <HistoryIcon fontSize="small" />
-                </div>
-            </div>
-        </div>
+            {/* Modals */}
+            <CreateCollectionModal
+                isOpen={isCollectionModalOpen}
+                onClose={handleCloseCollectionModal}
+                onOpenBrandModal={handleOpenBrandModal}
+            />
+            <CreateBrandModal
+                isOpen={isBrandModalOpen}
+                onClose={handleCloseBrandModal}
+                onBack={handleBackToCollection}
+            />
+        </>
     )
 }
 
