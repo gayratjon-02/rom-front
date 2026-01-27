@@ -2,6 +2,7 @@ import Head from "next/head";
 import Image from "next/image";
 import { Geist, Geist_Mono } from "next/font/google";
 import { useTheme } from "@mui/material";
+import { useState, useCallback } from "react";
 import HomeTop from "@/libs/components/homePage/HomeTop";
 import HomeLeft from "@/libs/components/homePage/HomeLeft";
 import HomeMiddle from "@/libs/components/homePage/HomeMiddle";
@@ -21,6 +22,14 @@ export default function Home() {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
 
+  // State to trigger brand list refresh in HomeLeft
+  const [brandRefreshTrigger, setBrandRefreshTrigger] = useState(0);
+
+  // Callback to refresh brands list when a new brand is created
+  const handleBrandCreated = useCallback(() => {
+    setBrandRefreshTrigger(prev => prev + 1);
+  }, []);
+
   return (
     <div style={{
       display: 'flex',
@@ -30,7 +39,7 @@ export default function Home() {
       color: isDarkMode ? '#ffffff' : '#1a1a1a'
     }}>
       {/* Left Sidebar */}
-      <HomeLeft isDarkMode={isDarkMode} />
+      <HomeLeft isDarkMode={isDarkMode} refreshTrigger={brandRefreshTrigger} />
 
       {/* Main Content Area */}
       <div style={{
@@ -40,7 +49,7 @@ export default function Home() {
         overflow: 'hidden',
         background: isDarkMode ? '#1a1a1a' : '#ffffff'
       }}>
-        <HomeTop />
+        <HomeTop onBrandCreated={handleBrandCreated} />
         <div style={{
           flex: 1,
           overflow: 'auto',

@@ -12,8 +12,13 @@ import HistoryIcon from '@mui/icons-material/History';
 import styles from "@/scss/styles/HomePage/HomeTop.module.scss";
 import { ColorModeContext } from "@/pages/_app";
 import CreateBrandModal from '@/libs/components/modals/CreateBrandModal';
+import { Brand } from '@/libs/types/homepage/brand';
 
-const HomeTop = () => {
+interface HomeTopProps {
+    onBrandCreated?: () => void;
+}
+
+const HomeTop: React.FC<HomeTopProps> = ({ onBrandCreated }) => {
     const theme = useTheme();
     const colorMode = useContext(ColorModeContext);
     const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
@@ -27,6 +32,14 @@ const HomeTop = () => {
 
     const handleCloseBrandModal = () => {
         setIsBrandModalOpen(false);
+    };
+
+    const handleBrandCreated = (brand: Brand) => {
+        console.log('New brand created:', brand);
+        // Notify parent to refresh brands list
+        if (onBrandCreated) {
+            onBrandCreated();
+        }
     };
 
     return (
@@ -88,6 +101,7 @@ const HomeTop = () => {
             <CreateBrandModal
                 isOpen={isBrandModalOpen}
                 onClose={handleCloseBrandModal}
+                onBrandCreated={handleBrandCreated}
             />
         </>
     )
