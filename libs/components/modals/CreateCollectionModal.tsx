@@ -1,58 +1,126 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { useTheme } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import styles from "@/scss/styles/Modals/CreateCollectionModal.module.scss";
+import React, { useState, useRef } from 'react';
+import { useTheme } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import styles from '@/scss/styles/Modals/CreateCollectionModal.module.scss';
+import { createCollection } from '@/libs/server/HomePage/collection';
+import { Collection } from '@/libs/types/homepage/collection';
+import { Brand } from '@/libs/types/homepage/brand';
+import { AuthApiError } from '@/libs/components/types/config';
 
 interface CreateCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenBrandModal: () => void;
+  onCollectionCreated?: (collection: Collection) => void;
+  brands: Brand[];
+  selectedBrandId?: string;
+  onOpenBrandModal?: () => void;
 }
 
 const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
   isOpen,
   onClose,
-  onOpenBrandModal,
+  onCollectionCreated,
+  brands,
+  selectedBrandId,
+  onOpenBrandModal
 }) => {
   const theme = useTheme();
-  const isDarkMode = theme.palette.mode === "dark";
+  const isDarkMode = theme.palette.mode === 'dark';
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
-    name: "",
-    code: "",
-    brand: "",
-    description: "",
-    referenceImage: null as File | null,
+    name: '',
+    code: '',
+    brand_id: selectedBrandId || '',
+    description: ''
   });
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.value
     });
+    if (error) setError(null);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData({
-        ...formData,
-        referenceImage: e.target.files[0],
-      });
+  const handleBrandSelect = (brandId: string) => {
+    setFormData({
+      ...formData,
+      brand_id: brandId
+    });
+    setIsBrandDropdownOpen(false);
+    if (error) setError(null);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log("Collection data:", formData);
-    onClose();
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.brand_id) {
+      setError('Please select a brand');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const newCollection = await createCollection({
+        name: formData.name,
+        brand_id: formData.brand_id,
+        code: formData.code || undefined,
+        description: formData.description || undefined
+      });
+
+      console.log('Collection created:', newCollection);
+
+      // Reset form
+      setFormData({ name: '', code: '', brand_id: '', description: '' });
+      setSelectedImage(null);
+      setImagePreview(null);
+
+      if (onCollectionCreated) {
+        onCollectionCreated(newCollection);
+      }
+
+      onClose();
+    } catch (err) {
+      if (err instanceof AuthApiError) {
+        setError(err.errors.join(', '));
+      } else {
+        setError('Failed to create collection. Please try again.');
+      }
+      console.error('Error creating collection:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectedBrand = brands.find(b => b.id === formData.brand_id);
 
   if (!isOpen) return null;
 
@@ -72,8 +140,15 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className={styles.form}>
+          {/* Error Message */}
+          {error && (
+            <div className={styles.errorMessage}>
+              {error}
+            </div>
+          )}
+
+          {/* Name and Code Row */}
           <div className={styles.row}>
-            {/* Collection Name */}
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Collection Name <span className={styles.required}>*</span>
@@ -86,10 +161,10 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
                 placeholder="e.g., SS26"
                 className={styles.input}
                 required
+                disabled={isLoading}
               />
             </div>
 
-            {/* Code */}
             <div className={styles.formGroup}>
               <label className={styles.label}>Code (Optional)</label>
               <input
@@ -99,36 +174,58 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
                 onChange={handleInputChange}
                 placeholder="e.g., ss26"
                 className={styles.input}
+                disabled={isLoading}
               />
             </div>
           </div>
 
-          {/* Brand */}
+          {/* Brand Selection */}
           <div className={styles.formGroup}>
             <div className={styles.labelRow}>
               <label className={styles.label}>
                 Brand <span className={styles.required}>*</span>
               </label>
-              <button
-                type="button"
-                className={styles.newBrandButton}
-                onClick={onOpenBrandModal}
-              >
-                + New Brand
-              </button>
+              {onOpenBrandModal && (
+                <button
+                  type="button"
+                  className={styles.newBrandButton}
+                  onClick={() => {
+                    onClose();
+                    onOpenBrandModal();
+                  }}
+                >
+                  + New Brand
+                </button>
+              )}
             </div>
-            <select
-              name="brand"
-              value={formData.brand}
-              onChange={handleInputChange}
-              className={styles.select}
-              required
-            >
-              <option value="">Select a brand</option>
-              <option value="gayratjon">Gayratjon</option>
-              <option value="nike">Nike</option>
-              <option value="adidas">Adidas</option>
-            </select>
+            <div className={styles.selectWrapper}>
+              <div
+                className={`${styles.selectButton} ${isBrandDropdownOpen ? styles.open : ''}`}
+                onClick={() => !isLoading && setIsBrandDropdownOpen(!isBrandDropdownOpen)}
+              >
+                <span>{selectedBrand?.name || 'Select a brand'}</span>
+                <KeyboardArrowDownIcon fontSize="small" className={styles.arrowIcon} />
+              </div>
+              {isBrandDropdownOpen && (
+                <div className={styles.dropdown}>
+                  {brands.length === 0 ? (
+                    <div className={styles.dropdownEmpty}>
+                      No brands available
+                    </div>
+                  ) : (
+                    brands.map((brand) => (
+                      <div
+                        key={brand.id}
+                        className={`${styles.dropdownItem} ${formData.brand_id === brand.id ? styles.selected : ''}`}
+                        onClick={() => handleBrandSelect(brand.id)}
+                      >
+                        {brand.name}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Description */}
@@ -140,26 +237,27 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
               onChange={handleInputChange}
               placeholder="e.g., Spring/Summer 2026 collection with vibrant colors"
               className={styles.textarea}
-              rows={4}
+              rows={3}
+              disabled={isLoading}
             />
           </div>
 
-          {/* Reference Image */}
+          {/* DA Reference Image */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>DA Reference Image</label>
+            <label className={styles.label}>DA Reference Image (Optional)</label>
             <div className={styles.uploadSection}>
-              <div className={styles.uploadBox}>
-                <input
-                  type="file"
-                  id="referenceImage"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className={styles.fileInput}
-                />
-                <label htmlFor="referenceImage" className={styles.uploadLabel}>
-                  <span className={styles.uploadIcon}>+</span>
-                  <span className={styles.uploadText}>Upload</span>
-                </label>
+              <div
+                className={styles.uploadBox}
+                onClick={handleUploadClick}
+              >
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className={styles.imagePreview} />
+                ) : (
+                  <>
+                    <span className={styles.uploadIcon}>+</span>
+                    <span className={styles.uploadText}>Upload</span>
+                  </>
+                )}
               </div>
               <div className={styles.uploadDescription}>
                 <p>
@@ -167,18 +265,30 @@ const CreateCollectionModal: React.FC<CreateCollectionModalProps> = ({
                   style (Direction Artistique) for this collection.
                 </p>
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className={styles.fileInput}
+              />
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className={styles.actions}>
-            <button type="submit" className={styles.createButton}>
-              Create Collection
+            <button
+              type="submit"
+              className={styles.createButton}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating...' : 'Create Collection'}
             </button>
             <button
               type="button"
               onClick={onClose}
               className={styles.cancelButton}
+              disabled={isLoading}
             >
               Cancel
             </button>
