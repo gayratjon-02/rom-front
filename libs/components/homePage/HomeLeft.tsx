@@ -6,7 +6,7 @@ import styles from '@/scss/styles/HomePage/HomeLeft.module.scss';
 import { getUserInfo, logout, UserInfo } from '@/libs/server/HomePage/signup';
 import { getAllBrands } from '@/libs/server/HomePage/brand';
 import { Brand } from '@/libs/types/homepage/brand';
-import CreateCollectionModal from '@/libs/components/modals/CreateCollectionModal';
+import CreateCollectionWizard from '@/libs/components/modals/CreateCollectionWizard';
 import CreateBrandModal from '@/libs/components/modals/CreateBrandModal';
 
 interface HomeLeftProps {
@@ -37,9 +37,9 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   const [expandedBrandId, setExpandedBrandId] = useState<string | null>(null);
 
   // Modal states
-  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const [isCollectionWizardOpen, setIsCollectionWizardOpen] = useState(false);
   const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
-  const [selectedBrandForCollection, setSelectedBrandForCollection] = useState<string | undefined>(undefined);
+  const [selectedBrandForCollection, setSelectedBrandForCollection] = useState<Brand | null>(null);
 
   useEffect(() => {
     const info = getUserInfo();
@@ -90,9 +90,9 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
     }
   };
 
-  const handleCreateCollectionClick = (brandId: string) => {
-    setSelectedBrandForCollection(brandId);
-    setIsCollectionModalOpen(true);
+  const handleCreateCollectionClick = (brand: Brand) => {
+    setSelectedBrandForCollection(brand);
+    setIsCollectionWizardOpen(true);
     setExpandedBrandId(null);
   };
 
@@ -210,7 +210,7 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
                   <div className={styles.brandDropdown}>
                     <button
                       className={styles.dropdownItem}
-                      onClick={() => handleCreateCollectionClick(brand.id)}
+                      onClick={() => handleCreateCollectionClick(brand)}
                     >
                       <span className={styles.addIcon}>+</span>
                       <span>Create New Collection</span>
@@ -277,15 +277,16 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
         </div>
       </div>
 
-      {/* Create Collection Modal */}
-      <CreateCollectionModal
-        isOpen={isCollectionModalOpen}
-        onClose={() => setIsCollectionModalOpen(false)}
-        onCollectionCreated={handleCollectionCreated}
-        brands={brands}
-        selectedBrandId={selectedBrandForCollection}
-        onOpenBrandModal={() => setIsBrandModalOpen(true)}
-      />
+      {/* Create Collection Wizard */}
+      {selectedBrandForCollection && (
+        <CreateCollectionWizard
+          isOpen={isCollectionWizardOpen}
+          onClose={() => setIsCollectionWizardOpen(false)}
+          brandId={selectedBrandForCollection.id}
+          brandName={selectedBrandForCollection.name}
+          onCollectionCreated={handleCollectionCreated}
+        />
+      )}
 
       {/* Create Brand Modal */}
       <CreateBrandModal
