@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import styles from '@/scss/styles/HomePage/HomeLeft.module.scss';
-import { getUserInfo, logout } from '@/libs/server/HomePage/signup';
+import { getUserInfo, logout, UserInfo } from '@/libs/server/HomePage/signup';
 import { getAllBrands } from '@/libs/server/HomePage/brand';
 import { Brand } from '@/libs/types/homepage/brand';
 
@@ -25,9 +25,13 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   const [activeBrandId, setActiveBrandId] = useState<string | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoadingBrands, setIsLoadingBrands] = useState(true);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
-  // Get user info from localStorage
-  const userInfo = getUserInfo();
+  // Get user info from localStorage - only on client side to avoid hydration mismatch
+  useEffect(() => {
+    const info = getUserInfo();
+    setUserInfo(info);
+  }, []);
 
   // Fetch brands from backend
   useEffect(() => {
