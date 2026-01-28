@@ -50,8 +50,10 @@
   min-height: 0;
 
   @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
   }
 }
 
@@ -61,6 +63,12 @@
   gap: 20px;
   overflow-y: auto;
   padding-right: 8px;
+
+  @media (max-width: 1024px) {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
 
   &::-webkit-scrollbar {
     width: 4px;
