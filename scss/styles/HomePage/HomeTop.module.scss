@@ -111,7 +111,175 @@
   }
 }
 
-// Selected Brand Display\n.selectedBrand {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 8px 12px;\n  border-radius: 8px;\n  background: rgba(79, 70, 229, 0.12);\n  color: #a5a0ff;\n  font-size: 14px;\n  font-weight: 500;\n  cursor: default;\n  border: 1px solid rgba(79, 70, 229, 0.25);\n\n  .light & {\n    background: rgba(79, 70, 229, 0.08);\n    color: #4f46e5;\n    border: 1px solid rgba(79, 70, 229, 0.15);\n  }\n\n  svg {\n    width: 18px;\n    height: 18px;\n  }\n\n  span {\n    user-select: none;\n  }\n}
+// Selected Brand/Collection Display
+.selectedBrand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(79, 70, 229, 0.12);
+  color: #a5a0ff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(79, 70, 229, 0.18);
+    border-color: rgba(79, 70, 229, 0.35);
+  }
+
+  .light & {
+    background: rgba(79, 70, 229, 0.08);
+    color: #4f46e5;
+    border: 1px solid rgba(79, 70, 229, 0.15);
+
+    &:hover {
+      background: rgba(79, 70, 229, 0.12);
+      border-color: rgba(79, 70, 229, 0.25);
+    }
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.2s ease;
+
+    &.rotated {
+      transform: rotate(180deg);
+    }
+  }
+
+  span {
+    user-select: none;
+  }
+}
+
+.collectionCode {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #8b85ff;
+  background: rgba(139, 133, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(139, 133, 255, 0.25);
+
+  .light & {
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.12);
+    border-color: rgba(79, 70, 229, 0.2);
+  }
+}
+
+// Collection Dropdown
+.collectionDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 220px;
+  background: rgba(20, 22, 25, 0.98);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: slideDownTop 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(79, 70, 229, 0.15);
+
+  .light & {
+    background: rgba(255, 255, 255, 0.99);
+    border-color: rgba(79, 70, 229, 0.15);
+    box-shadow: 
+      0 4px 16px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(79, 70, 229, 0.1);
+  }
+}
+
+@keyframes slideDownTop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0.0, 0.2, 1);
+  border-left: 2px solid transparent;
+
+  &:hover {
+    background: rgba(79, 70, 229, 0.2);
+    color: #a5a0ff;
+    border-left-color: rgba(139, 133, 255, 0.4);
+    padding-left: 16px;
+  }
+
+  &.active {
+    background: rgba(79, 70, 229, 0.3);
+    color: #ffffff;
+    font-weight: 600;
+    border-left-color: #8b85ff;
+  }
+
+  .light & {
+    color: rgba(0, 0, 0, 0.75);
+
+    &:hover {
+      background: rgba(79, 70, 229, 0.12);
+      color: #4f46e5;
+      padding-left: 16px;
+    }
+
+    &.active {
+      background: rgba(79, 70, 229, 0.18);
+      color: #4f46e5;
+    }
+  }
+}
+
+.collectionName {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdownCollectionCode {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #8b85ff;
+  background: rgba(139, 133, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(139, 133, 255, 0.25);
+
+  .light & {
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.12);
+    border-color: rgba(79, 70, 229, 0.2);
+  }
+}
 
 // Style Set Button
 .styleSetButton {
