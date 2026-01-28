@@ -139,8 +139,25 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
     setExpandedBrandId(null);
   };
 
-  const handleCollectionCreated = () => {
-    console.log('Collection created successfully');
+  const handleCollectionCreated = async (newCollection: Collection) => {
+    console.log('Collection created successfully:', newCollection);
+
+    // Refresh collections for the brand
+    if (selectedBrandForCollection) {
+      try {
+        const collections = await getCollectionsByBrand(selectedBrandForCollection.id);
+        setBrandCollections(prev => ({
+          ...prev,
+          [selectedBrandForCollection.id]: collections
+        }));
+
+        // Expand the brand to show the new collection
+        setExpandedBrandId(selectedBrandForCollection.id);
+        setActiveBrandId(selectedBrandForCollection.id);
+      } catch (error) {
+        console.error('Error refreshing collections:', error);
+      }
+    }
   };
 
   const handleBrandCreated = (newBrand: Brand) => {
