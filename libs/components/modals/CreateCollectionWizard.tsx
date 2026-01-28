@@ -892,10 +892,11 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                         )}
                     </div>
                 </div>
+            </motion.div>
         </div>
-        </div >
     );
 };
 
 
 export default CreateCollectionWizard;
+
