@@ -71,9 +71,9 @@ function Home() {
         style={{
           display: 'none', // Hidden on desktop
           position: 'fixed',
-          top: '72px', // Lower position to not overlap content
+          top: '80px', // Lowered to 80px to safely clear the header and tabs
           left: '16px',
-          zIndex: 1100,
+          zIndex: 1100, // Higher than sidebar
           width: '44px',
           height: '44px',
           background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
@@ -128,7 +128,7 @@ function Home() {
             right: 0,
             bottom: 0,
             background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1050,
+            zIndex: 999, // Lower than HomeLeft (1000)
             backdropFilter: 'blur(4px)',
           }}
           className="mobile-overlay"
@@ -136,18 +136,14 @@ function Home() {
       )}
 
       {/* Left Sidebar */}
-      <div
-        style={{
-          transition: 'transform 0.3s ease-in-out',
-        }}
-        className={`home-left-container ${isMobileDrawerOpen ? 'drawer-open' : 'drawer-closed'}`}
-      >
+      <div className="home-left-container">
         <HomeLeft
           isDarkMode={isDarkMode}
           refreshTrigger={brandRefreshTrigger}
           onBrandSelect={handleBrandSelect}
           onCollectionSelect={handleCollectionSelect}
           onBrandCreated={handleBrandCreated}
+          isOpen={isMobileDrawerOpen} // Pass isOpen state to trigger HomeLeft's internal mobile CSS
         />
       </div>
 
@@ -194,28 +190,10 @@ function Home() {
             display: block !important;
           }
           
+          /* HomeLeft component handles its own fixed position on mobile */
+          /* We just need to ensure the container doesn't block interactions */
           .home-left-container {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            height: 100vh !important;
-            z-index: 1100 !important;
-          }
-          
-          .home-left-container.drawer-closed {
-            transform: translateX(-100%) !important;
-          }
-          
-          .home-left-container.drawer-open {
-            transform: translateX(0) !important;
-          }
-        }
-        
-        @media (min-width: 769px) {
-          .home-left-container {
-            position: relative !important;
-            transform: none !important;
-            transition: none !important;
+            display: contents; 
           }
         }
       `}</style>
