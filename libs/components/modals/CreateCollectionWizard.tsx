@@ -273,83 +273,90 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         goToNextStep();
     };
 
-    // Step 2 Submit: Just validate image and move to next step (analysis happens at the end)
+    // Step 2 Submit: AI Analysis with Claude
     const handleAnalyzeStyle = async () => {
         if (!uploadedImage) return;
 
-        // Just move to Step 3 - actual analysis will happen when creating collection
-        goToNextStep();
-    };
-
-    // Step 3 Submit: Create Collection + Analyze + Finalize (ALL AT ONCE)
-    const handleFinish = async () => {
-        if (!uploadedImage) return;
-
-        setIsSubmitting(true);
+        setIsAnalyzing(true);
         setError(null);
         setAnalysisProgress(0);
 
+        // Simulate realistic progress during API call
+        const progressInterval = setInterval(() => {
+            setAnalysisProgress(prev => {
+                // Slow down as we get closer to 90%
+                const increment = prev < 30 ? 8 : prev < 60 ? 4 : prev < 80 ? 2 : 0.5;
+                return Math.min(prev + increment, 90);
+            });
+        }, 200);
+
         try {
-            // Step 1: Create Collection
-            const newCol = await createCollection({
+            // First create a temporary collection to get an ID for analysis
+            const tempCollection = await createCollection({
                 name: formData.name,
                 code: formData.code,
                 brand_id: brandId,
                 description: formData.description || undefined
             });
+            setCreatedCollection(tempCollection);
 
-            // Step 2: Analyze DA with progress
-            setAnalysisProgress(30);
-            const progressInterval = setInterval(() => {
-                setAnalysisProgress(prev => Math.min(prev + 2, 85));
-            }, 200);
+            // Call API to analyze
+            const result = await analyzeDA(tempCollection.id, uploadedImage);
 
-            try {
-                const result = await analyzeDA(newCol.id, uploadedImage);
-                clearInterval(progressInterval);
-                setAnalysisProgress(100);
+            // Complete progress
+            clearInterval(progressInterval);
+            setAnalysisProgress(100);
 
-                // Small delay to show 100%
-                await new Promise(resolve => setTimeout(resolve, 300));
+            // Small delay to show 100% before transitioning
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-                // Step 3: Update collection with DA JSON
-                const updated = await updateDAJSON(newCol.id, {
-                    analyzed_da_json: result.analyzed_da_json
-                });
+            setDaAnalysis(result.analyzed_da_json);
+            goToNextStep();
+        } catch (err) {
+            clearInterval(progressInterval);
+            setAnalysisProgress(0);
+            console.error('Analysis error:', err);
+            if (err instanceof AuthApiError) setError(err.errors.join(', '));
+            else setError('Failed to analyze style');
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
 
-                const finalCollection = {
-                    ...newCol,
-                    analyzed_da_json: updated.analyzed_da_json,
-                    fixed_elements: updated.fixed_elements
-                };
+    // Step 3 Submit: Update DA JSON and finalize
+    const handleFinish = async () => {
+        if (!createdCollection || !daAnalysis) return;
 
-                console.log('Collection created and finalized:', finalCollection);
+        setIsSubmitting(true);
+        setError(null);
 
-                if (onCollectionCreated) {
-                    onCollectionCreated(finalCollection);
-                }
+        try {
+            // Update collection with edited DA JSON
+            const updated = await updateDAJSON(createdCollection.id, {
+                analyzed_da_json: daAnalysis
+            });
 
-                handleClose();
-            } catch (analysisErr) {
-                clearInterval(progressInterval);
-                // If analysis fails, we should delete the created collection
-                // to avoid orphaned collections
-                console.error('Analysis failed, collection created but not finalized:', analysisErr);
-                if (analysisErr instanceof AuthApiError) {
-                    setError('Analysis failed: ' + analysisErr.errors.join(', '));
-                } else {
-                    setError('Failed to analyze reference image. Please try again.');
-                }
+            const finalCollection = {
+                ...createdCollection,
+                analyzed_da_json: updated.analyzed_da_json,
+                fixed_elements: updated.fixed_elements
+            };
+
+            console.log('Collection finalized:', finalCollection);
+
+            if (onCollectionCreated) {
+                onCollectionCreated(finalCollection);
             }
+
+            handleClose();
         } catch (err) {
             if (err instanceof AuthApiError) {
                 setError(err.errors.join(', '));
             } else {
-                setError('Failed to create collection. Please try again.');
+                setError('Failed to finalize collection. Please try again.');
             }
         } finally {
             setIsSubmitting(false);
-            setAnalysisProgress(0);
         }
     };
 
@@ -610,8 +617,8 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                             </motion.div>
                         )}
 
-                        {/* Step 3: Review & Confirm */}
-                        {currentStep === 3 && (
+                        {/* Step 3: Review & Edit Visual Direction */}
+                        {currentStep === 3 && daAnalysis && (
                             <motion.div
                                 key="step3"
                                 custom={direction}
@@ -622,81 +629,195 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                                 className={styles.stepContent}
                             >
-                                {!isSubmitting ? (
-                                    <>
-                                        <div className={styles.stepHeader}>
-                                            <h3>Review & Confirm</h3>
-                                            <p>Review your collection details before creating</p>
-                                        </div>
+                                <div className={styles.stepHeader}>
+                                    <h3>Review & Edit Visual Direction</h3>
+                                    <p>Fine-tune the AI-generated attributes for your collection</p>
+                                </div>
 
-                                        {error && (
-                                            <div className={styles.errorMessage}>{error}</div>
+                                {error && (
+                                    <div className={styles.errorMessage}>{error}</div>
+                                )}
+
+                                <div className={styles.reviewLayout}>
+                                    {/* Image Preview */}
+                                    <div className={styles.reviewImageSection}>
+                                        {imagePreview && (
+                                            <img src={imagePreview} alt="DA Reference" className={styles.reviewImage} />
                                         )}
+                                        <div className={styles.collectionInfo}>
+                                            <h4>{formData.name}</h4>
+                                            <span className={styles.codeTag}>{formData.code}</span>
+                                        </div>
+                                    </div>
 
-                                        <div className={styles.reviewLayout}>
-                                            {/* Image Preview */}
-                                            <div className={styles.reviewImageSection}>
-                                                {imagePreview && (
-                                                    <img src={imagePreview} alt="DA Reference" className={styles.reviewImage} />
-                                                )}
-                                                <div className={styles.collectionInfo}>
-                                                    <h4>{formData.name}</h4>
-                                                    <span className={styles.codeTag}>{formData.code}</span>
-                                                </div>
-                                            </div>
+                                    {/* Editable Fields - Organized by Section */}
+                                    <div className={styles.reviewFields}>
+                                        {/* Background Section */}
+                                        <div className={styles.sectionDivider}>
+                                            <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Background</h4>
+                                        </div>
 
-                                            {/* Summary Info */}
-                                            <div className={styles.reviewFields}>
-                                                <div className={styles.formGroup}>
-                                                    <label>Collection Name</label>
-                                                    <div className={styles.readOnlyValue}>{formData.name}</div>
-                                                </div>
-                                                <div className={styles.formGroup}>
-                                                    <label>Collection Code</label>
-                                                    <div className={styles.readOnlyValue}>{formData.code}</div>
-                                                </div>
-                                                {formData.description && (
-                                                    <div className={styles.formGroup}>
-                                                        <label>Description</label>
-                                                        <div className={styles.readOnlyValue}>{formData.description}</div>
-                                                    </div>
-                                                )}
-                                                <div className={styles.formGroup}>
-                                                    <label>DA Reference Image</label>
-                                                    <div className={styles.readOnlyValue}>✓ Uploaded</div>
-                                                </div>
+                                        <div className={styles.formGroup}>
+                                            <label>Background Color</label>
+                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                <div style={{
+                                                    width: '48px',
+                                                    height: '48px',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: daAnalysis.background?.color_hex || '#ffffff',
+                                                    border: '2px solid var(--wizard-border)',
+                                                    flexShrink: 0,
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                                }} />
+                                                <input
+                                                    type="text"
+                                                    value={daAnalysis.background?.color_hex || ''}
+                                                    onChange={e => handleAnalysisChange('background.color_hex', e.target.value)}
+                                                    className={styles.input}
+                                                    placeholder="#HEXCODE"
+                                                    style={{ width: '120px' }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={daAnalysis.background?.color_name || ''}
+                                                    onChange={e => handleAnalysisChange('background.color_name', e.target.value)}
+                                                    className={styles.input}
+                                                    placeholder="Color Name"
+                                                    style={{ flex: 1 }}
+                                                />
                                             </div>
                                         </div>
-                                    </>
-                                ) : (
-                                    /* Creating Collection & Analyzing - Loading State */
-                                    <div className={styles.analyzingContainer}>
-                                        <div className={styles.aiLoader}>
-                                            <div className={styles.aiRing}>
-                                                <div className={styles.aiRingInner} />
-                                            </div>
-                                            <Sparkles className={styles.aiIcon} size={32} />
-                                        </div>
-                                        <h3 className={styles.analyzingTitle}>
-                                            {analysisProgress < 30 ? 'Creating Collection...' : 'Analyzing Visual Style...'}
-                                        </h3>
-                                        <p className={styles.analyzingText}>
-                                            {analysisProgress < 30 && 'Setting up your collection in the database...'}
-                                            {analysisProgress >= 30 && analysisProgress < 100 && 'Claude AI is extracting visual atmosphere, lighting, and mood...'}
-                                            {analysisProgress >= 100 && 'Finalizing collection...'}
-                                        </p>
-                                        <div className={styles.analyzeProgress}>
-                                            <motion.div
-                                                className={styles.analyzeProgressFill}
-                                                style={{ width: `${analysisProgress}%` }}
-                                                transition={{ duration: 0.3, ease: 'easeOut' }}
+
+                                        <div className={styles.formGroup}>
+                                            <label>Background Description</label>
+                                            <textarea
+                                                value={daAnalysis.background?.description || ''}
+                                                onChange={e => handleAnalysisChange('background.description', e.target.value)}
+                                                className={styles.textarea}
+                                                rows={2}
+                                                placeholder="e.g., Burgundy studio wall with soft texture"
                                             />
                                         </div>
-                                        <p className={styles.progressText}>
-                                            {analysisProgress}%
-                                        </p>
+
+                                        <div className={styles.formGroup}>
+                                            <label>Background Texture</label>
+                                            <input
+                                                type="text"
+                                                value={daAnalysis.background?.texture || ''}
+                                                onChange={e => handleAnalysisChange('background.texture', e.target.value)}
+                                                className={styles.input}
+                                                placeholder="e.g., Concrete, Velvet, Seamless Paper"
+                                            />
+                                        </div>
+
+                                        {/* Lighting Section */}
+                                        <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
+                                            <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Lighting</h4>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div className={styles.formGroup}>
+                                                <label>Type</label>
+                                                <input
+                                                    type="text"
+                                                    value={daAnalysis.lighting?.type || ''}
+                                                    onChange={e => handleAnalysisChange('lighting.type', e.target.value)}
+                                                    className={styles.input}
+                                                    placeholder="e.g., Soft Natural"
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label>Direction</label>
+                                                <input
+                                                    type="text"
+                                                    value={daAnalysis.lighting?.direction || ''}
+                                                    onChange={e => handleAnalysisChange('lighting.direction', e.target.value)}
+                                                    className={styles.input}
+                                                    placeholder="e.g., Front-lit"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                            <div className={styles.formGroup}>
+                                                <label>Temperature</label>
+                                                <input
+                                                    type="text"
+                                                    value={daAnalysis.lighting?.temperature || ''}
+                                                    onChange={e => handleAnalysisChange('lighting.temperature', e.target.value)}
+                                                    className={styles.input}
+                                                    placeholder="e.g., Warm 3000K"
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label>Intensity</label>
+                                                <input
+                                                    type="text"
+                                                    value={daAnalysis.lighting?.intensity || ''}
+                                                    onChange={e => handleAnalysisChange('lighting.intensity', e.target.value)}
+                                                    className={styles.input}
+                                                    placeholder="e.g., Medium"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Props Section */}
+                                        <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
+                                            <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Props & Styling</h4>
+                                        </div>
+
+                                        <div className={styles.formGroup}>
+                                            <label>Props Style</label>
+                                            <textarea
+                                                value={daAnalysis.props?.style || ''}
+                                                onChange={e => handleAnalysisChange('props.style', e.target.value)}
+                                                className={styles.textarea}
+                                                rows={2}
+                                                placeholder="e.g., Playful romantic Valentine theme"
+                                            />
+                                        </div>
+
+                                        <div className={styles.formGroup}>
+                                            <label>Props Placement</label>
+                                            <input
+                                                type="text"
+                                                value={daAnalysis.props?.placement || ''}
+                                                onChange={e => handleAnalysisChange('props.placement', e.target.value)}
+                                                className={styles.input}
+                                                placeholder="e.g., Heart props on left and right sides"
+                                            />
+                                        </div>
+
+                                        {/* Atmosphere */}
+                                        <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
+                                            <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Atmosphere</h4>
+                                        </div>
+
+                                        <div className={styles.formGroup}>
+                                            <label>Mood</label>
+                                            <input
+                                                type="text"
+                                                value={daAnalysis.mood || ''}
+                                                onChange={e => handleAnalysisChange('mood', e.target.value)}
+                                                className={styles.input}
+                                                placeholder="e.g., Romantic, Playful, Minimalist"
+                                            />
+                                        </div>
+
+                                        <div className={styles.formGroup}>
+                                            <label>Composition Framing</label>
+                                            <input
+                                                type="text"
+                                                value={daAnalysis.composition?.framing || ''}
+                                                onChange={e => handleAnalysisChange('composition.framing', e.target.value)}
+                                                className={styles.input}
+                                                placeholder="e.g., Medium shot, centered"
+                                            />
+                                        </div>
                                     </div>
-                                )}
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -739,13 +860,13 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
 
                         {currentStep === 2 && !isAnalyzing && (
                             <motion.button
-                                className={`${styles.primaryBtn} ${(!isStep2Valid) ? styles.disabled : ''}`}
+                                className={`${styles.analyzeBtn} ${(!isStep2Valid || isAnalyzing) ? styles.disabled : ''}`}
                                 onClick={handleAnalyzeStyle}
-                                disabled={!isStep2Valid}
+                                disabled={!isStep2Valid || isAnalyzing}
                                 whileTap={{ scale: 0.97 }}
                             >
-                                Continue
-                                <ArrowRight size={18} />
+                                <Sparkles size={18} />
+                                Analyze Style
                             </motion.button>
                         )}
 
@@ -759,7 +880,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                 {isSubmitting ? (
                                     <>
                                         <Loader2 size={18} className={styles.spinner} />
-                                        Finalizing...
+                                        Saving...
                                     </>
                                 ) : (
                                     <>
@@ -771,9 +892,36 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                         )}
                     </div>
                 </div>
-            </motion.div>
         </div>
+        </div >
     );
 };
 
 export default CreateCollectionWizard;
+/* Creating Collection & Analyzing - Loading State */
+<div className={styles.analyzingContainer}>
+    <div className={styles.aiLoader}>
+        <div className={styles.aiRing}>
+            <div className={styles.aiRingInner} />
+        </div>
+        <Sparkles className={styles.aiIcon} size={32} />
+    </div>
+    <h3 className={styles.analyzingTitle}>
+        {analysisProgress < 30 ? 'Creating Collection...' : 'Analyzing Visual Style...'}
+    </h3>
+    <p className={styles.analyzingText}>
+        {analysisProgress < 30 && 'Setting up your collection in the database...'}
+        {analysisProgress >= 30 && analysisProgress < 100 && 'Claude AI is extracting visual atmosphere, lighting, and mood...'}
+        {analysisProgress >= 100 && 'Finalizing collection...'}
+    </p>
+    <div className={styles.analyzeProgress}>
+        <motion.div
+            className={styles.analyzeProgressFill}
+            style={{ width: `${analysisProgress}%` }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+        />
+    </div>
+    <p className={styles.progressText}>
+        {analysisProgress}%
+    </p>
+</div>
