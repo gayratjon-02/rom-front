@@ -333,128 +333,134 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
             )}
 
             {/* Dynamic Brands from API with Dropdown */}
-            {!isLoadingBrands && brands.map((brand) => (
-              <div key={brand.id} className={styles.brandWrapper}>
-                <button
-                  className={`${styles.menuItem} ${activeBrandId === brand.id ? styles.active : ''}`}
-                  onClick={() => handleBrandClick(brand)}
-                >
-                  <span className={styles.icon}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </span>
-                  <span className={styles.label}>{brand.name}</span>
-                  <span className={`${styles.expandIcon} ${expandedBrandId === brand.id ? styles.expanded : ''}`}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </span>
-                </button>
+            {!isLoadingBrands && brands.map((brand) => {
+              // Hide non-selected brands when a brand is expanded
+              const shouldShow = !expandedBrandId || expandedBrandId === brand.id;
+              if (!shouldShow) return null;
 
-                {/* Brand Dropdown */}
-                {expandedBrandId === brand.id && (
-                  <div className={styles.brandDropdown}>
-                    {/* Loading state */}
-                    {loadingCollections === brand.id && (
-                      <div className={styles.loadingItem}>
-                        <span className={styles.loadingText}>Loading collections...</span>
-                      </div>
-                    )}
+              return (
+                <div key={brand.id} className={styles.brandWrapper}>
+                  <button
+                    className={`${styles.menuItem} ${activeBrandId === brand.id ? styles.active : ''}`}
+                    onClick={() => handleBrandClick(brand)}
+                  >
+                    <span className={styles.icon}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </span>
+                    <span className={styles.label}>{brand.name}</span>
+                    <span className={`${styles.expandIcon} ${expandedBrandId === brand.id ? styles.expanded : ''}`}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </span>
+                  </button>
 
-                    {/* Collections list */}
-                    {brandCollections[brand.id]?.map((collection) => (
-                      <div key={collection.id} className={styles.collectionItemWrapper}>
-                        <button
-                          className={`${styles.collectionItem} ${activeCollectionId === collection.id ? styles.active : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveCollectionId(collection.id);
-                            setActiveBrandId(brand.id); // Ensure brand is active
-                            if (onBrandSelect) onBrandSelect(brand);
-                            if (onCollectionSelect) onCollectionSelect(collection, brand);
-                          }}
-                        >
-                          <span className={styles.collectionIcon}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            </svg>
-                          </span>
-                          <span className={styles.collectionName}>{collection.name}</span>
-                          {collection.code && (
-                            <span className={styles.collectionCode}>{collection.code}</span>
-                          )}
-                        </button>
-                        <div className={styles.collectionActions}>
-                          <button
-                            className={styles.actionBtn}
-                            onClick={(e) => handleEditCollectionClick(collection, e)}
-                            title="Edit"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                          </button>
-                          <button
-                            className={`${styles.actionBtn} ${styles.deleteAction}`}
-                            onClick={(e) => handleDeleteCollectionClick(collection, brand.id, e)}
-                            title="Delete"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="m19 6-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            </svg>
-                          </button>
+                  {/* Brand Dropdown */}
+                  {expandedBrandId === brand.id && (
+                    <div className={styles.brandDropdown}>
+                      {/* Loading state */}
+                      {loadingCollections === brand.id && (
+                        <div className={styles.loadingItem}>
+                          <span className={styles.loadingText}>Loading collections...</span>
                         </div>
-                      </div>
-                    ))}
+                      )}
 
-                    {/* No collections message */}
-                    {!loadingCollections && brandCollections[brand.id]?.length === 0 && (
-                      <div className={styles.emptyCollections}>
-                        No collections yet
-                      </div>
-                    )}
+                      {/* Collections list */}
+                      {brandCollections[brand.id]?.map((collection) => (
+                        <div key={collection.id} className={styles.collectionItemWrapper}>
+                          <button
+                            className={`${styles.collectionItem} ${activeCollectionId === collection.id ? styles.active : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveCollectionId(collection.id);
+                              setActiveBrandId(brand.id); // Ensure brand is active
+                              if (onBrandSelect) onBrandSelect(brand);
+                              if (onCollectionSelect) onCollectionSelect(collection, brand);
+                            }}
+                          >
+                            <span className={styles.collectionIcon}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                              </svg>
+                            </span>
+                            <span className={styles.collectionName}>{collection.name}</span>
+                            {collection.code && (
+                              <span className={styles.collectionCode}>{collection.code}</span>
+                            )}
+                          </button>
+                          <div className={styles.collectionActions}>
+                            <button
+                              className={styles.actionBtn}
+                              onClick={(e) => handleEditCollectionClick(collection, e)}
+                              title="Edit"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                            <button
+                              className={`${styles.actionBtn} ${styles.deleteAction}`}
+                              onClick={(e) => handleDeleteCollectionClick(collection, brand.id, e)}
+                              title="Delete"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="m19 6-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
 
-                    {/* Create new collection button */}
-                    <button
-                      className={styles.dropdownItem}
-                      onClick={() => handleCreateCollectionClick(brand)}
-                    >
-                      <span className={styles.addIcon}>+</span>
-                      <span>Create New Collection</span>
-                    </button>
+                      {/* No collections message */}
+                      {!loadingCollections && brandCollections[brand.id]?.length === 0 && (
+                        <div className={styles.emptyCollections}>
+                          No collections yet
+                        </div>
+                      )}
 
-                    {/* Divider */}
-                    <div className={styles.dropdownDivider} />
+                      {/* Create new collection button */}
+                      <button
+                        className={styles.dropdownItem}
+                        onClick={() => handleCreateCollectionClick(brand)}
+                      >
+                        <span className={styles.addIcon}>+</span>
+                        <span>Create New Collection</span>
+                      </button>
 
-                    {/* Edit Brand */}
-                    <button
-                      className={styles.dropdownItem}
-                      onClick={(e) => handleEditBrandClick(brand, e)}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                        <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                      </svg>
-                      <span>Edit Brand</span>
-                    </button>
+                      {/* Divider */}
+                      <div className={styles.dropdownDivider} />
 
-                    {/* Delete Brand */}
-                    <button
-                      className={`${styles.dropdownItem} ${styles.danger}`}
-                      onClick={(e) => handleDeleteBrandClick(brand, e)}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="m19 6-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      </svg>
-                      <span>Delete Brand</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+                      {/* Edit Brand */}
+                      <button
+                        className={styles.dropdownItem}
+                        onClick={(e) => handleEditBrandClick(brand, e)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        <span>Edit Brand</span>
+                      </button>
+
+                      {/* Delete Brand */}
+                      <button
+                        className={`${styles.dropdownItem} ${styles.danger}`}
+                        onClick={(e) => handleDeleteBrandClick(brand, e)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="m19 6-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        <span>Delete Brand</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
 
             {/* No brands message */}
             {!isLoadingBrands && brands.length === 0 && (

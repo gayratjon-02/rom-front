@@ -116,6 +116,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     // Analysis state
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [daAnalysis, setDaAnalysis] = useState<AnalyzedDAJSON | null>(null);
+    const [analysisProgress, setAnalysisProgress] = useState(0);
 
     // Submit state
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -299,13 +300,33 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
 
         setIsAnalyzing(true);
         setError(null);
+        setAnalysisProgress(0);
+
+        // Simulate realistic progress during API call
+        const progressInterval = setInterval(() => {
+            setAnalysisProgress(prev => {
+                // Slow down as we get closer to 90%
+                const increment = prev < 30 ? 8 : prev < 60 ? 4 : prev < 80 ? 2 : 0.5;
+                return Math.min(prev + increment, 90);
+            });
+        }, 200);
 
         try {
             // Call API to analyze
             const result = await analyzeDA(createdCollection.id, uploadedImage);
+
+            // Complete progress
+            clearInterval(progressInterval);
+            setAnalysisProgress(100);
+
+            // Small delay to show 100% before transitioning
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             setDaAnalysis(result.analyzed_da_json);
             goToNextStep();
         } catch (err) {
+            clearInterval(progressInterval);
+            setAnalysisProgress(0);
             console.error('Analysis error:', err);
             if (err instanceof AuthApiError) setError(err.errors.join(', '));
             else setError('Failed to analyze style');
@@ -592,11 +613,16 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                         <div className={styles.analyzeProgress}>
                                             <motion.div
                                                 className={styles.analyzeProgressFill}
-                                                initial={{ width: '0%' }}
-                                                animate={{ width: '100%' }}
-                                                transition={{ duration: 2.5, ease: 'linear' }}
+                                                style={{ width: `${analysisProgress}%` }}
+                                                transition={{ duration: 0.3, ease: 'easeOut' }}
                                             />
                                         </div>
+                                        <p className={styles.progressText}>
+                                            {analysisProgress < 30 && 'Loading reference image...'}
+                                            {analysisProgress >= 30 && analysisProgress < 60 && 'Analyzing visual elements...'}
+                                            {analysisProgress >= 60 && analysisProgress < 90 && 'Extracting lighting and mood...'}
+                                            {analysisProgress >= 90 && 'Finalizing analysis...'}
+                                        </p>
                                     </div>
                                 )}
                             </motion.div>

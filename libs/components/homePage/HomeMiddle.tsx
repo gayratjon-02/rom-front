@@ -277,62 +277,60 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             return;
         }
 
-        try {
-            // Create Generation record
-            const generation = await createGeneration({
-                product_id: productId,
-                collection_id: selectedCollection.id,
-                generation_type: 'product_visuals',
-            });
+        // Calculate prompts locally (instant, no API needed)
+        const product = productAnalysis;
+        const da = mockDAAnalysis;
 
-            setGenerationId(generation.id);
+        const basePrompt = `A ${product.type} in ${product.color} ${product.material}. ${product.details}. ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.background.description}. ${da.mood} aesthetic.`;
 
-            // Generate merged prompts from product + DA
-            // Generate merged prompts for 6-shot system
-            const product = productAnalysis;
-            const da = mockDAAnalysis; // In real app, this would be selected DA
+        const initialPrompts: MergedPrompts = {
+            duo: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
+            solo: `Male Model solo shot. ${basePrompt} Professional pose.`,
+            flatlay_front: `Flatlay front view. ${basePrompt} Clean arrangement.`,
+            flatlay_back: `Flatlay angled back view. ${basePrompt} Detail focus.`,
+            closeup_front: `Close-up detail front. Focus on ${product.material} texture and ${product.logo_front}.`,
+            closeup_back: `Close-up detail back. Focus on features and ${product.logo_back}.`,
+        };
 
-            const basePrompt = `A ${product.type} in ${product.color} ${product.material}. ${product.details}. ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.background.description}. ${da.mood} aesthetic.`;
+        // Navigate immediately for instant transition
+        setMergedPrompts(initialPrompts);
+        setCurrentStep(3);
 
-            const initialPrompts: MergedPrompts = {
-                duo: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
-                solo: `Male Model solo shot. ${basePrompt} Professional pose.`,
-                flatlay_front: `Flatlay front view. ${basePrompt} Clean arrangement.`,
-                flatlay_back: `Flatlay angled back view. ${basePrompt} Detail focus.`,
-                closeup_front: `Close-up detail front. Focus on ${product.material} texture and ${product.logo_front}.`,
-                closeup_back: `Close-up detail back. Focus on features and ${product.logo_back}.`,
-            };
-
-            // Save prompts to backend immediately
-            // 1. Trigger backend merge (required to initialize prompt slots)
+        // Sync with backend in background (non-blocking)
+        (async () => {
             try {
-                await mergePrompts(generation.id);
-            } catch (error: any) {
-                // If collection DA is missing, try to inject mock DA and retry
-                const errorMsg = error?.message || '';
-                const responseMsg = error?.response?.message || '';
+                const generation = await createGeneration({
+                    product_id: productId,
+                    collection_id: selectedCollection.id,
+                    generation_type: 'product_visuals',
+                });
 
-                if (errorMsg.includes('Collection DA') || responseMsg.includes('Collection DA')) {
-                    console.warn('Collection DA missing, injecting mock data...');
-                    await updateDAJSON(selectedCollection.id, {
-                        analyzed_da_json: mockDAAnalysis
-                    });
-                    // Retry merge
+                setGenerationId(generation.id);
+
+                // Trigger backend merge (initializes prompt slots)
+                try {
                     await mergePrompts(generation.id);
-                } else {
-                    throw error;
+                } catch (error: any) {
+                    const errorMsg = error?.message || '';
+                    const responseMsg = error?.response?.message || '';
+
+                    if (errorMsg.includes('Collection DA') || responseMsg.includes('Collection DA')) {
+                        console.warn('Collection DA missing, injecting mock data...');
+                        await updateDAJSON(selectedCollection.id, {
+                            analyzed_da_json: mockDAAnalysis
+                        });
+                        await mergePrompts(generation.id);
+                    } else {
+                        console.error('Merge failed:', error);
+                    }
                 }
+
+                // Overwrite with our calculated 6-shot prompts
+                await updatePromptsAPI(generation.id, { prompts: initialPrompts });
+            } catch (error) {
+                console.error('Background sync failed:', error);
             }
-
-            // 2. Overwrite with our calculated 6-shot prompts
-            await updatePromptsAPI(generation.id, { prompts: initialPrompts });
-
-            setMergedPrompts(initialPrompts);
-            setCurrentStep(3);
-        } catch (error) {
-            console.error('Failed to create generation:', error);
-            alert('Failed to create generation. Please try again.');
-        }
+        })();
     }, [productAnalysis, productId, selectedCollection]);
 
     const handlePromptsChange = useCallback(async (key: keyof MergedPrompts, value: string) => {
