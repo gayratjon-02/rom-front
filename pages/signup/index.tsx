@@ -202,8 +202,9 @@ const SignupPage = () => {
       });
       setSignupData({ name: "", email: "", password: "" });
 
+      // Use hard navigation to ensure localStorage token is available
       setTimeout(() => {
-        router.push("/"); // Change to your desired route
+        window.location.href = "/";
       }, 1500);
     } catch (error) {
       if (error instanceof AuthApiError) {
@@ -242,8 +243,9 @@ const SignupPage = () => {
       });
       setLoginData({ email: "", password: "" });
 
+      // Use hard navigation to ensure localStorage token is available
       setTimeout(() => {
-        router.push("/"); // Change to your desired route HOmEPAGE
+        window.location.href = "/";
       }, 1500);
     } catch (error) {
       if (error instanceof AuthApiError) {
