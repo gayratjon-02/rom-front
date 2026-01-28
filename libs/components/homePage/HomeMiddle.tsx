@@ -23,7 +23,7 @@ import {
     updateMergedPrompts as updatePromptsAPI,
     mergePrompts,
 } from '@/libs/server/HomePage/merging';
-import { updateDAJSON } from '@/libs/server/HomePage/collection';
+import { updateDAJSON, getCollection } from '@/libs/server/HomePage/collection';
 
 interface HomeMiddleProps {
     isDarkMode?: boolean;
@@ -82,6 +82,8 @@ const mockDAAnalysis = {
 const mockProductAnalysis: ProductAnalysis = {
     type: "Zip Tracksuit Set",
     color: "Forest Green",
+    color_hex: "#2D5016",
+    texture: "Plush velour with soft light-absorbing nap and matte finish",
     material: "Velour",
     details: "White piping, gold zipper",
     logo_front: "Romimi script embroidery (Chest)",
@@ -106,6 +108,55 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis>(mockProductAnalysis);
     const [productId, setProductId] = useState<string | null>(null);
     const [generationId, setGenerationId] = useState<string | null>(null);
+
+    // DA Analysis: fetched from collection, falls back to mock
+    const [collectionDA, setCollectionDA] = useState<typeof mockDAAnalysis>(mockDAAnalysis);
+
+    // Fetch real DA analysis when collection changes
+    useEffect(() => {
+        if (!selectedCollection?.id) {
+            setCollectionDA(mockDAAnalysis);
+            return;
+        }
+
+        (async () => {
+            try {
+                const collection = await getCollection(selectedCollection.id);
+                if (collection.analyzed_da_json) {
+                    // Merge fetched DA with mock defaults for any missing fields
+                    setCollectionDA({
+                        ...mockDAAnalysis,
+                        ...collection.analyzed_da_json,
+                        background: {
+                            ...mockDAAnalysis.background,
+                            ...(collection.analyzed_da_json.background || {}),
+                        },
+                        lighting: {
+                            ...mockDAAnalysis.lighting,
+                            ...(collection.analyzed_da_json.lighting || {}),
+                        },
+                        props: {
+                            ...mockDAAnalysis.props,
+                            ...(collection.analyzed_da_json.props || {}),
+                        },
+                        composition: {
+                            ...mockDAAnalysis.composition,
+                            ...(collection.analyzed_da_json.composition || {}),
+                        },
+                        camera: {
+                            ...mockDAAnalysis.camera,
+                            ...(collection.analyzed_da_json.camera || {}),
+                        },
+                    });
+                } else {
+                    setCollectionDA(mockDAAnalysis);
+                }
+            } catch (error) {
+                console.warn('Failed to fetch collection DA, using defaults:', error);
+                setCollectionDA(mockDAAnalysis);
+            }
+        })();
+    }, [selectedCollection?.id]);
 
     // Step 3: Merged Prompts
     const [isGenerating, setIsGenerating] = useState(false);
@@ -198,6 +249,8 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             const mappedAnalysis: ProductAnalysis = {
                 type: json.product_type || json.productType || 'Product type not detected',
                 color: json.color_name || json.colorName || 'Color not detected',
+                color_hex: json.color_hex || json.colorHex || '#000000',
+                texture: json.texture_description || json.textureDescription || 'Texture not detected',
                 material: json.material || 'Material not detected',
                 details: (() => {
                     const detailsParts: string[] = [];
@@ -277,19 +330,19 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             return;
         }
 
-        // Calculate prompts locally (instant, no API needed)
+        // Calculate prompts locally using REAL collection DA (instant, no API needed)
         const product = productAnalysis;
-        const da = mockDAAnalysis;
+        const da = collectionDA;
 
-        const basePrompt = `A ${product.type} in ${product.color} ${product.material}. ${product.details}. ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.background.description}. ${da.mood} aesthetic.`;
+        const basePrompt = `A ${product.type} in ${product.color} (${product.color_hex}) ${product.material}. Texture: ${product.texture}. ${product.details}. Shot in ${da.background.description} with ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.mood} aesthetic.`;
 
         const initialPrompts: MergedPrompts = {
             duo: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
             solo: `Male Model solo shot. ${basePrompt} Professional pose.`,
             flatlay_front: `Flatlay front view. ${basePrompt} Clean arrangement.`,
             flatlay_back: `Flatlay angled back view. ${basePrompt} Detail focus.`,
-            closeup_front: `Close-up detail front. Focus on ${product.material} texture and ${product.logo_front}.`,
-            closeup_back: `Close-up detail back. Focus on features and ${product.logo_back}.`,
+            closeup_front: `Close-up detail front. Focus on ${product.material} texture and ${product.logo_front}. ${da.background.description}.`,
+            closeup_back: `Close-up detail back. Focus on features and ${product.logo_back}. ${da.background.description}.`,
         };
 
         // Navigate immediately for instant transition
@@ -315,9 +368,9 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                     const responseMsg = error?.response?.message || '';
 
                     if (errorMsg.includes('Collection DA') || responseMsg.includes('Collection DA')) {
-                        console.warn('Collection DA missing, injecting mock data...');
+                        console.warn('Collection DA missing, injecting current DA data...');
                         await updateDAJSON(selectedCollection.id, {
-                            analyzed_da_json: mockDAAnalysis
+                            analyzed_da_json: collectionDA
                         });
                         await mergePrompts(generation.id);
                     } else {
@@ -331,7 +384,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                 console.error('Background sync failed:', error);
             }
         })();
-    }, [productAnalysis, productId, selectedCollection]);
+    }, [productAnalysis, productId, selectedCollection, collectionDA]);
 
     const handlePromptsChange = useCallback(async (key: keyof MergedPrompts, value: string) => {
         // Update local state immediately
@@ -542,7 +595,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                         <ProductStep3_MergePreview
                             key="step3"
                             productAnalysis={productAnalysis}
-                            daAnalysis={mockDAAnalysis}
+                            daAnalysis={collectionDA}
                             mergedPrompts={mergedPrompts}
                             onPromptsChange={handlePromptsChange}
                             onBack={() => setCurrentStep(2)}

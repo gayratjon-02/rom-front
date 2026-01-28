@@ -14,8 +14,8 @@ const formatFileSize = (bytes: number): string => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Maksimal rasm hajmi (10MB)
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Maksimal rasm hajmi (30MB)
+const MAX_FILE_SIZE = 30 * 1024 * 1024;
 
 interface ProductStep1Props {
     frontImage: File | null;
@@ -203,7 +203,7 @@ const ProductStep1_Upload: React.FC<ProductStep1Props> = ({
                             </div>
                             <h4 className={styles.dropzoneTitle}>Front View</h4>
                             <p className={styles.dropzoneSubtitle}>
-                                Drag & drop or click to upload
+                                Drag & drop or click to upload (Max: 30MB)
                             </p>
                         </>
                     )}
@@ -258,7 +258,7 @@ const ProductStep1_Upload: React.FC<ProductStep1Props> = ({
                             </div>
                             <h4 className={styles.dropzoneTitle}>Back View</h4>
                             <p className={styles.dropzoneSubtitle}>
-                                Drag & drop or click to upload
+                                Drag & drop or click to upload (Max: 30MB)
                             </p>
                         </>
                     )}

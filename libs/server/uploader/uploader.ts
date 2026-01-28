@@ -164,7 +164,7 @@ export async function uploadProductImage(
 
 export function validateImageFile(
     file: File,
-    maxSizeMB: number = 10
+    maxSizeMB: number = 30
 ): { isValid: boolean; error?: string } {
     // Check file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];

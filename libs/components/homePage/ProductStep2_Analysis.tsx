@@ -8,6 +8,8 @@ import styles from '@/scss/styles/HomePage/HomeMiddle.module.scss';
 export interface ProductAnalysis {
     type: string;
     color: string;
+    color_hex: string;
+    texture: string;
     material: string;
     details: string;
     logo_front: string;
@@ -32,6 +34,8 @@ const ProductStep2_Analysis: React.FC<ProductStep2Props> = ({
     const fields: { key: keyof ProductAnalysis; label: string; placeholder: string }[] = [
         { key: 'type', label: 'Product Type', placeholder: 'e.g., Zip Tracksuit Set' },
         { key: 'color', label: 'Primary Color', placeholder: 'e.g., Forest Green' },
+        { key: 'color_hex', label: 'Color Hex Code', placeholder: 'e.g., #2D5016' },
+        { key: 'texture', label: 'Texture Description', placeholder: 'e.g., Heavyweight fleece with matte finish' },
         { key: 'material', label: 'Material', placeholder: 'e.g., Velour, Cotton' },
         { key: 'details', label: 'Details & Accents', placeholder: 'e.g., White piping, gold zipper' },
         { key: 'logo_front', label: 'Front Logo Position', placeholder: 'e.g., Chest embroidery' },
@@ -99,13 +103,37 @@ const ProductStep2_Analysis: React.FC<ProductStep2Props> = ({
                     {fields.map((field) => (
                         <div key={field.key} className={styles.formGroup}>
                             <label className={styles.formLabel}>{field.label}</label>
-                            <input
-                                type="text"
-                                className={styles.formInput}
-                                value={analysis[field.key]}
-                                onChange={(e) => onAnalysisChange(field.key, e.target.value)}
-                                placeholder={field.placeholder}
-                            />
+                            {field.key === 'color_hex' ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div
+                                        style={{
+                                            width: 36,
+                                            height: 36,
+                                            borderRadius: 8,
+                                            border: '2px solid var(--wizard-border)',
+                                            backgroundColor: /^#[0-9A-Fa-f]{6}$/.test(analysis.color_hex) ? analysis.color_hex : '#000000',
+                                            flexShrink: 0,
+                                        }}
+                                        title={`Preview: ${analysis.color_hex}`}
+                                    />
+                                    <input
+                                        type="text"
+                                        className={styles.formInput}
+                                        value={analysis[field.key]}
+                                        onChange={(e) => onAnalysisChange(field.key, e.target.value)}
+                                        placeholder={field.placeholder}
+                                        style={{ flex: 1 }}
+                                    />
+                                </div>
+                            ) : (
+                                <input
+                                    type="text"
+                                    className={styles.formInput}
+                                    value={analysis[field.key]}
+                                    onChange={(e) => onAnalysisChange(field.key, e.target.value)}
+                                    placeholder={field.placeholder}
+                                />
+                            )}
                         </div>
                     ))}
                 </div>

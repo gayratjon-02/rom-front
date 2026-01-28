@@ -135,9 +135,11 @@ const ProductStep3_MergePreview: React.FC<ProductStep3Props> = ({
         return resolution === '4K' ? Math.ceil(baseCost * 1.5) : baseCost;
     }, [totalShots, resolution]);
 
-    // Generate example prompt
+    // Generate example prompt — dynamically pulls from actual Collection DA
     const examplePrompt = useMemo(() => {
-        const productPart = `${productAnalysis.color} ${productAnalysis.type} made of ${productAnalysis.material}`;
+        const hexPart = productAnalysis.color_hex ? ` (${productAnalysis.color_hex})` : '';
+        const texturePart = productAnalysis.texture ? `, ${productAnalysis.texture}` : '';
+        const productPart = `${productAnalysis.color}${hexPart} ${productAnalysis.type} made of ${productAnalysis.material}${texturePart}`;
         const detailsPart = productAnalysis.details;
         const daPart = `${daAnalysis.background.description} setting with ${daAnalysis.lighting.type} (${daAnalysis.lighting.temperature}) lighting, ${daAnalysis.mood} mood`;
 
