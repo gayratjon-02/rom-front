@@ -184,7 +184,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                     // Last resort: clean stringify
                     try {
                         return JSON.stringify(field, null, 0)
-                            .replace(/[{}"]/g, '')
+                            .replace(/[{}\"]/g, '')
                             .replace(/,/g, ', ');
                     } catch {
                         return 'Invalid logo data';
@@ -222,9 +222,46 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             setProductAnalysis(mappedAnalysis);
             setProductId(product.id);
             setCurrentStep(2);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Analysis failed:', error);
-            alert('Failed to analyze product. Please try again.');
+
+            // Check if this is a quota error (429)
+            const errorMessage = error?.message || error?.errors?.join(', ') || 'Unknown error';
+            const isQuotaError = error?.statusCode === 429 ||
+                errorMessage.toLowerCase().includes('quota') ||
+                errorMessage.toLowerCase().includes('429') ||
+                errorMessage.toLowerCase().includes('exceeded');
+
+            if (isQuotaError) {
+                // Show user-friendly quota error message
+                const quotaMessage =
+                    '⚠️ AI Analysis Quota Exceeded\n\n' +
+                    'The Claude API quota has been reached. Please try one of these options:\n\n' +
+                    '• Wait a few hours for the quota to reset\n' +
+                    '• Check your Claude API plan at https://console.anthropic.com\n\n';
+
+                // In development, offer to use mock data
+                if (process.env.NODE_ENV === 'development') {
+                    const useMockData = confirm(
+                        quotaMessage +
+                        '🔧 Development Mode: Would you like to use mock analysis data to continue testing?'
+                    );
+
+                    if (useMockData) {
+                        // Use mock analysis data
+                        setProductAnalysis(mockProductAnalysis);
+                        setProductId('mock-product-' + Date.now());
+                        setCurrentStep(2);
+                        console.warn('⚠️ Using mock analysis data due to API quota limit');
+                        return;
+                    }
+                } else {
+                    alert(quotaMessage);
+                }
+            } else {
+                // Show generic error message for other errors
+                alert(`Failed to analyze product: ${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
+            }
         } finally {
             setIsAnalyzing(false);
         }

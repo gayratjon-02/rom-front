@@ -14,11 +14,10 @@ import {
     Loader2
 } from 'lucide-react';
 import styles from '@/scss/styles/Modals/CreateCollectionWizard.module.scss';
-import { createCollection } from '@/libs/server/HomePage/collection';
+import { createCollection, updateDAJSON, analyzeDA } from '@/libs/server/HomePage/collection';
 import { Collection } from '@/libs/types/homepage/collection';
 import { AuthApiError } from '@/libs/components/types/config';
-import { uploadDAImage, validateImageFile } from '@/libs/server/uploader/uploader';
-import { UploadProgress } from '@/libs/types/uploader/uploader.input';
+import { validateImageFile } from '@/libs/server/uploader/uploader';
 
 interface CreateCollectionWizardProps {
     isOpen: boolean;
@@ -34,81 +33,43 @@ interface FormData {
     description: string;
 }
 
-interface DAAnalysis {
-    background: string;
-    lighting: string;
-    composition: string;
-    props_decor: string;
-    mood: string;
-    color_palette: string[];
-}
-
-// Mock AI Analysis Response
-const mockDAAnalysis: DAAnalysis = {
-    background: "Clean white cyclorama with soft natural shadows, creating an infinite horizon effect",
-    lighting: "Soft diffused daylight from large windows, warm golden hour tones with minimal harsh shadows",
-    composition: "Editorial centered portrait, depth of field focused on foreground, rule of thirds framing",
-    props_decor: "Minimalist wooden stool, dried pampas grass arrangement, neutral linen fabric draping",
-    mood: "Serene, sophisticated, effortlessly elegant with a touch of Scandinavian simplicity",
-    color_palette: ["#F5F5F0", "#E8E4DF", "#D4C8BE", "#A69B8D", "#7A6F63"]
-};
-
-// Helper function to convert hex to approximate color name
-const hexToColorName = (hex: string): string => {
-    const colorNames: Record<string, string> = {
-        '#F5F5F0': 'Ivory',
-        '#E8E4DF': 'Linen',
-        '#D4C8BE': 'Soft Taupe',
-        '#A69B8D': 'Warm Gray',
-        '#7A6F63': 'Dark Taupe',
-        '#FFFFFF': 'White',
-        '#000000': 'Black',
-        '#F5F5DC': 'Beige',
-        '#87CEEB': 'Sky Blue',
-        '#90EE90': 'Light Green',
-        '#2C2C2C': 'Charcoal',
-        '#8B4513': 'Saddle Brown',
-        '#DAA520': 'Goldenrod',
-        '#0A0A0A': 'Near Black',
-        '#8B0000': 'Dark Red',
-        '#1A1A1A': 'Jet Black',
-        '#C41E3A': 'Cardinal Red',
-        '#808080': 'Gray',
-        '#FF6B6B': 'Coral Red',
-        '#4ECDC4': 'Turquoise',
-        '#2C3E50': 'Dark Slate',
-        '#A3B18A': 'Sage Green',
-        '#588157': 'Fern Green',
-        '#DAD7CD': 'Pale Silver',
-        '#3A5A40': 'Hunter Green',
-        '#722F37': 'Wine',
-        '#D4AF37': 'Metallic Gold',
-        '#1C1C1C': 'Eerie Black',
-        '#F8F8FF': 'Ghost White',
-        '#F5DEB3': 'Wheat',
-        '#DEB887': 'Burlywood',
+// Backend DA Response Interface
+interface AnalyzedDAJSON {
+    background: {
+        color_hex: string;
+        color_name: string;
+        description: string;
+        texture?: string;
     };
-
-    // Check exact match first
-    const upperHex = hex.toUpperCase();
-    if (colorNames[upperHex]) {
-        return colorNames[upperHex];
-    }
-
-    // If no exact match, analyze the color
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-
-    const lightness = (r + g + b) / 3;
-
-    if (lightness > 240) return 'Off White';
-    if (lightness > 200) return 'Light Gray';
-    if (lightness > 150) return 'Medium Gray';
-    if (lightness > 100) return 'Dark Gray';
-    if (lightness > 50) return 'Charcoal';
-    return 'Near Black';
-};
+    props: {
+        items: string[];
+        placement: string;
+        style: string;
+    };
+    mood: string;
+    lighting: {
+        type: string;
+        temperature: string;
+        direction: string;
+        intensity: string;
+    };
+    composition: {
+        layout: string;
+        poses: string;
+        framing: string;
+    };
+    styling: {
+        bottom: string;
+        feet: string;
+    };
+    camera: {
+        focal_length_mm: number;
+        aperture: number;
+        focus: string;
+    };
+    quality: string;
+    analyzed_at?: string;
+}
 
 // Slide animation variants
 const slideVariants = {
@@ -139,6 +100,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     // Wizard state
     const [currentStep, setCurrentStep] = useState(1);
     const [direction, setDirection] = useState(0);
+    const [createdCollection, setCreatedCollection] = useState<Collection | null>(null);
 
     // Form state
     const [formData, setFormData] = useState<FormData>({
@@ -153,16 +115,13 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
 
     // Analysis state
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [daAnalysis, setDaAnalysis] = useState<DAAnalysis | null>(null);
+    const [daAnalysis, setDaAnalysis] = useState<AnalyzedDAJSON | null>(null);
 
     // Submit state
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Upload state
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+
 
     // Input refs for keyboard navigation
     const nameInputRef = useRef<HTMLInputElement>(null);
@@ -172,9 +131,6 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
 
     // Drag state
     const [isDragging, setIsDragging] = useState(false);
-
-    // Color palette names (editable by user)
-    const [colorPaletteNames, setColorPaletteNames] = useState<string>('');
 
     // Handle input changes
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -186,14 +142,27 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     };
 
     // Handle DA Analysis input changes
-    const handleAnalysisChange = (field: keyof DAAnalysis, value: string) => {
-        if (daAnalysis) {
-            setDaAnalysis(prev => prev ? { ...prev, [field]: value } : null);
+    // Handle DA Analysis input changes (supports nested paths like 'background.description')
+    const handleAnalysisChange = (path: string, value: any) => {
+        if (!daAnalysis) return;
+
+        // Deep clone to avoid mutation
+        const newData = JSON.parse(JSON.stringify(daAnalysis));
+
+        // Update nested property
+        const parts = path.split('.');
+        let current = newData;
+        for (let i = 0; i < parts.length - 1; i++) {
+            if (!current[parts[i]]) current[parts[i]] = {};
+            current = current[parts[i]];
         }
+
+        current[parts[parts.length - 1]] = value;
+        setDaAnalysis(newData);
     };
 
-    // Process dropped/selected file - upload to server
-    const processFile = useCallback(async (file: File) => {
+    // Process dropped/selected file
+    const processFile = useCallback((file: File) => {
         if (!file || !file.type.startsWith('image/')) return;
 
         // Validate file
@@ -209,28 +178,8 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         reader.onloadend = () => setImagePreview(reader.result as string);
         reader.readAsDataURL(file);
 
-        // Upload to server
-        setIsUploading(true);
-        setUploadProgress(0);
         setError(null);
-
-        try {
-            const imageUrl = await uploadDAImage(file, (progress) => {
-                setUploadProgress(progress.percentage);
-            });
-            setUploadedImageUrl(imageUrl);
-            console.log('DA Image uploaded:', imageUrl);
-        } catch (err) {
-            console.error('Upload error:', err);
-            if (err instanceof AuthApiError) {
-                setError(err.errors.join(', '));
-            } else {
-                setError('Failed to upload image. Please try again.');
-            }
-            // Keep local preview even if upload fails
-        } finally {
-            setIsUploading(false);
-        }
+        // Note: Actual upload happens during analysis step
     }, []);
 
     // Handle image drop on drop zone
@@ -312,35 +261,81 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         setCurrentStep(prev => Math.max(prev - 1, 1));
     };
 
-    // AI Analysis (Mock)
-    const handleAnalyzeStyle = async () => {
-        setIsAnalyzing(true);
+    // Step 1 Submit: Create Collection Draft
+    const handleContinue = async () => {
+        if (currentStep !== 1) {
+            goToNextStep();
+            return;
+        }
 
-        // Simulate AI processing time
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        // If collection already created, just skip to next step
+        if (createdCollection) {
+            goToNextStep();
+            return;
+        }
 
-        setDaAnalysis(mockDAAnalysis);
-        setIsAnalyzing(false);
-        goToNextStep();
-    };
-
-    // Submit collection
-    const handleCreateCollection = async () => {
         setIsSubmitting(true);
         setError(null);
-
         try {
-            const newCollection = await createCollection({
+            const newCol = await createCollection({
                 name: formData.name,
                 code: formData.code,
                 brand_id: brandId,
                 description: formData.description || undefined
             });
+            setCreatedCollection(newCol);
+            goToNextStep();
+        } catch (err) {
+            if (err instanceof AuthApiError) setError(err.errors.join(', '));
+            else setError('Failed to create collection');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-            console.log('Collection created:', newCollection);
+    // Step 2 Submit: AI Analysis
+    const handleAnalyzeStyle = async () => {
+        if (!createdCollection || !uploadedImage) return;
+
+        setIsAnalyzing(true);
+        setError(null);
+
+        try {
+            // Call API to analyze
+            const result = await analyzeDA(createdCollection.id, uploadedImage);
+            setDaAnalysis(result.analyzed_da_json);
+            goToNextStep();
+        } catch (err) {
+            console.error('Analysis error:', err);
+            if (err instanceof AuthApiError) setError(err.errors.join(', '));
+            else setError('Failed to analyze style');
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    // Step 3 Submit: Finalize Collection
+    const handleFinish = async () => {
+        if (!createdCollection || !daAnalysis) return;
+
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            const updated = await updateDAJSON(createdCollection.id, {
+                analyzed_da_json: daAnalysis
+            });
+
+            const finalCollection = {
+                ...createdCollection,
+                analyzed_da_json: updated.analyzed_da_json,
+                fixed_elements: updated.fixed_elements
+            };
+
+            console.log('Collection finalized:', finalCollection);
 
             if (onCollectionCreated) {
-                onCollectionCreated(newCollection);
+                onCollectionCreated(finalCollection);
             }
 
             handleClose();
@@ -348,7 +343,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
             if (err instanceof AuthApiError) {
                 setError(err.errors.join(', '));
             } else {
-                setError('Failed to create collection. Please try again.');
+                setError('Failed to finalize collection. Please try again.');
             }
         } finally {
             setIsSubmitting(false);
@@ -489,7 +484,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                 // Allow Shift+Enter for new lines, Enter alone goes to next step
                                                 if (isStep1Valid) {
                                                     e.preventDefault();
-                                                    goToNextStep();
+                                                    handleContinue();
                                                 }
                                             }
                                         }}
@@ -532,28 +527,10 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                                     <img src={imagePreview} alt="DA Reference" className={styles.previewImage} />
 
                                                     {/* Upload Progress Overlay */}
-                                                    {isUploading && (
-                                                        <div className={styles.uploadProgressOverlay}>
-                                                            <div className={styles.uploadProgressContent}>
-                                                                <Loader2 size={24} className={styles.spinner} />
-                                                                <p>Uploading... {uploadProgress}%</p>
-                                                                <div className={styles.uploadProgressBar}>
-                                                                    <div
-                                                                        className={styles.uploadProgressFill}
-                                                                        style={{ width: `${uploadProgress}%` }}
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
+
 
                                                     {/* Upload Success Badge */}
-                                                    {!isUploading && uploadedImageUrl && (
-                                                        <div className={styles.uploadSuccessBadge}>
-                                                            <Check size={14} />
-                                                            Uploaded
-                                                        </div>
-                                                    )}
+
 
                                                     <div className={styles.imageOverlay}>
                                                         <button
@@ -659,79 +636,61 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                     </div>
 
                                     {/* Editable Fields */}
-                                    <div className={styles.reviewFields}>
-                                        <div className={styles.formGroup}>
-                                            <label>Background</label>
-                                            <textarea
-                                                value={daAnalysis.background}
-                                                onChange={e => handleAnalysisChange('background', e.target.value)}
-                                                className={styles.textarea}
-                                                rows={2}
-                                            />
-                                        </div>
-
-                                        <div className={styles.formGroup}>
-                                            <label>Lighting</label>
-                                            <input
-                                                type="text"
-                                                value={daAnalysis.lighting}
-                                                onChange={e => handleAnalysisChange('lighting', e.target.value)}
-                                                className={styles.input}
-                                            />
-                                        </div>
-
-                                        <div className={styles.formGroup}>
-                                            <label>Composition</label>
-                                            <textarea
-                                                value={daAnalysis.composition}
-                                                onChange={e => handleAnalysisChange('composition', e.target.value)}
-                                                className={styles.textarea}
-                                                rows={2}
-                                            />
-                                        </div>
-
-                                        <div className={styles.formGroup}>
-                                            <label>Props & Decor</label>
-                                            <textarea
-                                                value={daAnalysis.props_decor}
-                                                onChange={e => handleAnalysisChange('props_decor', e.target.value)}
-                                                className={styles.textarea}
-                                                rows={2}
-                                            />
-                                        </div>
-
-                                        <div className={styles.formGroup}>
-                                            <label>Mood</label>
-                                            <input
-                                                type="text"
-                                                value={daAnalysis.mood}
-                                                onChange={e => handleAnalysisChange('mood', e.target.value)}
-                                                className={styles.input}
-                                            />
-                                        </div>
-
-                                        {/* Color Palette */}
-                                        <div className={styles.colorPalette}>
-                                            <label>Color Palette</label>
-                                            <div className={styles.colorSwatches}>
-                                                {daAnalysis.color_palette.map((color, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className={styles.colorSwatch}
-                                                        style={{ backgroundColor: color }}
-                                                        title={`${hexToColorName(color)} (${color})`}
-                                                    />
-                                                ))}
+                                    {daAnalysis && (
+                                        <div className={styles.reviewFields}>
+                                            <div className={styles.formGroup}>
+                                                <label>Props Style & Decor</label>
+                                                <textarea
+                                                    value={daAnalysis.props?.style || ''}
+                                                    onChange={e => handleAnalysisChange('props.style', e.target.value)}
+                                                    className={styles.textarea}
+                                                    rows={2}
+                                                    placeholder="Describe props and styling..."
+                                                />
                                             </div>
-                                            <input
-                                                type="text"
-                                                value={colorPaletteNames || daAnalysis.color_palette.map(c => hexToColorName(c)).join(', ')}
-                                                onChange={(e) => setColorPaletteNames(e.target.value)}
-                                                className={styles.colorNamesInput}
-                                                placeholder="Describe your color palette..."
-                                            />
+
+                                            <div className={styles.formGroup}>
+                                                <label>Mood</label>
+                                                <input
+                                                    type="text"
+                                                    value={daAnalysis.mood || ''}
+                                                    onChange={e => handleAnalysisChange('mood', e.target.value)}
+                                                    className={styles.input}
+                                                />
+                                            </div>
+
+                                            {/* Background & Color */}
+                                            <div className={styles.formGroup}>
+                                                <label>Background Description</label>
+                                                <textarea
+                                                    value={daAnalysis.background?.description || ''}
+                                                    onChange={e => handleAnalysisChange('background.description', e.target.value)}
+                                                    className={styles.textarea}
+                                                    rows={2}
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label>Primary Background Color</label>
+                                                <div className={styles.colorInputRow} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                                    <input
+                                                        type="color"
+                                                        value={daAnalysis.background?.color_hex || '#ffffff'}
+                                                        onChange={e => handleAnalysisChange('background.color_hex', e.target.value)}
+                                                        className={styles.colorPicker}
+                                                        style={{ width: '40px', height: '40px', padding: 0, border: 'none', cursor: 'pointer' }}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={daAnalysis.background?.color_name || ''}
+                                                        onChange={e => handleAnalysisChange('background.color_name', e.target.value)}
+                                                        className={styles.input}
+                                                        placeholder="Color Name (e.g. Off White)"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}
@@ -754,21 +713,30 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                     <div className={styles.footerRight}>
                         {currentStep === 1 && (
                             <motion.button
-                                className={`${styles.primaryBtn} ${!isStep1Valid ? styles.disabled : ''}`}
-                                onClick={goToNextStep}
-                                disabled={!isStep1Valid}
+                                className={`${styles.primaryBtn} ${(!isStep1Valid || isSubmitting) ? styles.disabled : ''}`}
+                                onClick={handleContinue}
+                                disabled={!isStep1Valid || isSubmitting}
                                 whileTap={{ scale: 0.97 }}
                             >
-                                Continue
-                                <ArrowRight size={18} />
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 size={18} className={styles.spinner} />
+                                        Creating...
+                                    </>
+                                ) : (
+                                    <>
+                                        Continue
+                                        <ArrowRight size={18} />
+                                    </>
+                                )}
                             </motion.button>
                         )}
 
                         {currentStep === 2 && !isAnalyzing && (
                             <motion.button
-                                className={`${styles.analyzeBtn} ${!isStep2Valid ? styles.disabled : ''}`}
+                                className={`${styles.analyzeBtn} ${(!isStep2Valid || isAnalyzing) ? styles.disabled : ''}`}
                                 onClick={handleAnalyzeStyle}
-                                disabled={!isStep2Valid}
+                                disabled={!isStep2Valid || isAnalyzing}
                                 whileTap={{ scale: 0.97 }}
                             >
                                 <Sparkles size={18} />
@@ -779,19 +747,19 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                         {currentStep === 3 && (
                             <motion.button
                                 className={`${styles.createBtn} ${isSubmitting ? styles.loading : ''}`}
-                                onClick={handleCreateCollection}
+                                onClick={handleFinish}
                                 disabled={isSubmitting}
                                 whileTap={{ scale: 0.97 }}
                             >
                                 {isSubmitting ? (
                                     <>
                                         <Loader2 size={18} className={styles.spinner} />
-                                        Creating...
+                                        Finalizing...
                                     </>
                                 ) : (
                                     <>
                                         <Check size={18} />
-                                        Create Collection
+                                        Done
                                     </>
                                 )}
                             </motion.button>

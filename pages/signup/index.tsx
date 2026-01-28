@@ -128,7 +128,8 @@ const SignupPage = () => {
       const redirectPath = (router.query.redirect as string) || '/';
       router.replace(redirectPath);
     }
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Toggle Animation Logic
   useEffect(() => {

@@ -265,3 +265,52 @@ export async function updateDAJSON(
         });
     }
 }
+
+/**
+ * Analyze DA Reference Image (Step 2)
+ * POST /api/collections/:id/analyze-da
+ */
+export async function analyzeDA(
+    id: string,
+    imageFile: File
+): Promise<{ analyzed_da_json: any; fixed_elements: any; status: string; analyzed_at: string }> {
+    try {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+
+        const token = getAuthToken();
+        const headers: HeadersInit = {};
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+        // NOTE: Content-Type header is omitted to let browser set it with boundary
+
+        const response = await fetch(`${API_BASE}/collections/${id}/analyze-da`, {
+            method: "POST",
+            headers: headers,
+            body: formData,
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            const errorMessages = Array.isArray(responseData.message)
+                ? responseData.message
+                : [responseData.message || "Failed to analyze DA image"];
+
+            throw new AuthApiError(response.status, errorMessages, responseData);
+        }
+
+        return responseData;
+    } catch (error) {
+        if (error instanceof AuthApiError) {
+            throw error;
+        }
+
+        throw new AuthApiError(500, [Messages.CONNECTION_ERROR], {
+            statusCode: 500,
+            message: Messages.NETWORK_ERROR,
+            error: Messages.INTERNAL_SERVER_ERROR,
+        });
+    }
+}

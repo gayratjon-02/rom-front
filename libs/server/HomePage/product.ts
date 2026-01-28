@@ -297,7 +297,15 @@ export async function analyzeProduct(id: string): Promise<AnalyzeProductResponse
                 ? responseData.message
                 : [responseData.message || "Failed to analyze product"];
 
-            throw new AuthApiError(response.status, errorMessages, responseData);
+            // Create error with proper status code for quota errors
+            const error = new AuthApiError(response.status, errorMessages, responseData);
+
+            // Add helpful context for quota errors (429)
+            if (response.status === 429) {
+                console.error('🚨 API Quota Exceeded:', errorMessages.join(', '));
+            }
+
+            throw error;
         }
 
         return responseData as AnalyzeProductResponse;
