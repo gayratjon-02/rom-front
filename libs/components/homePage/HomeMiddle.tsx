@@ -160,6 +160,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
 
     // Step 3: Merged Prompts
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isMerging, setIsMerging] = useState(false); // NEW: for merge loading screen
     const [mergedPrompts, setMergedPrompts] = useState<MergedPrompts>({
         main_visual: '',
         lifestyle: '',
@@ -353,54 +354,24 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
 
         console.log('📝 Generated Prompts:', initialPrompts);
 
-        // Navigate immediately for instant transition
+        // Navigate immediately with local prompts (user can edit)
         setMergedPrompts(initialPrompts);
         setCurrentStep(3);
 
-        // Sync with backend (AWAIT to ensure completion)
+        // Create generation ID in background for later use
         try {
-            console.log('🔄 Creating generation...');
+            console.log('🔄 Creating generation ID for later...');
             const generation = await createGeneration({
                 product_id: productId,
                 collection_id: selectedCollection.id,
                 generation_type: 'product_visuals',
             });
-
-            console.log('✅ Generation created:', generation.id);
+            console.log('✅ Generation ID created:', generation.id);
             setGenerationId(generation.id);
-
-            // Trigger backend merge (initializes prompt slots) - MUST COMPLETE
-            console.log('🔀 Calling mergePrompts API...');
-            try {
-                await mergePrompts(generation.id);
-                console.log('✅ mergePrompts completed successfully');
-            } catch (error: any) {
-                console.error('❌ mergePrompts failed:', error);
-                const errorMsg = error?.message || '';
-                const responseMsg = error?.response?.message || '';
-
-                if (errorMsg.includes('Collection DA') || responseMsg.includes('Collection DA')) {
-                    console.warn('⚠️ Collection DA missing, injecting current DA data...');
-                    await updateDAJSON(selectedCollection.id, {
-                        analyzed_da_json: collectionDA
-                    });
-                    console.log('✅ DA JSON updated, retrying mergePrompts...');
-                    await mergePrompts(generation.id);
-                    console.log('✅ mergePrompts retry successful');
-                } else {
-                    throw error; // Re-throw if not DA-related
-                }
-            }
-
-            // Overwrite with our calculated 6-shot prompts
-            console.log('📤 Updating prompts on backend...');
-            await updatePromptsAPI(generation.id, { prompts: initialPrompts });
-            console.log('✅ Prompts updated on backend');
-
         } catch (error) {
-            console.error('❌ Backend sync failed:', error);
-            alert('Failed to prepare generation. Please try again.');
-            setCurrentStep(2); // Go back to analysis step
+            console.error('❌ Failed to create generation ID:', error);
+            alert('Failed to prepare for generation. Please try again.');
+            setCurrentStep(2);
         }
     }, [productAnalysis, productId, selectedCollection, collectionDA]);
 
@@ -421,9 +392,10 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     }, [generationId]);
 
     const handleGenerate = useCallback(async (visualTypes: string[]) => {
-        console.log('🚀 [STEP 4] handleGenerate called');
+        console.log('🚀 [GENERATE BUTTON] User clicked Generate');
         console.log('📋 Visual Types:', visualTypes);
         console.log('🆔 Generation ID:', generationId);
+        console.log('📝 Current Prompts (may be edited):', mergedPrompts);
 
         if (!generationId) {
             console.error('❌ No generation ID found!');
@@ -431,18 +403,59 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             return;
         }
 
-        setIsGenerating(true);
-        setCurrentStep(4);
+        if (!selectedCollection) {
+            console.error('❌ No collection selected!');
+            alert('Please select a collection first.');
+            return;
+        }
+
+        // STEP 1: Show merging UI (stay on Step 3 with loading overlay)
+        setIsMerging(true);
+        console.log('🔀 [MERGING] Starting merge process...');
 
         try {
-            // Start generation on the backend with selected shots
-            console.log('⚡ Calling startGeneration API...');
+            // Call mergePrompts API (creates visuals in DB)
+            console.log('🔀 Calling mergePrompts API...');
+            try {
+                await mergePrompts(generationId);
+                console.log('✅ mergePrompts completed successfully');
+            } catch (error: any) {
+                console.error('❌ mergePrompts failed:', error);
+                const errorMsg = error?.message || '';
+                const responseMsg = error?.response?.message || '';
+
+                if (errorMsg.includes('Collection DA') || responseMsg.includes('Collection DA')) {
+                    console.warn('⚠️ Collection DA missing, injecting current DA data...');
+                    await updateDAJSON(selectedCollection.id, {
+                        analyzed_da_json: collectionDA
+                    });
+                    console.log('✅ DA JSON updated, retrying mergePrompts...');
+                    await mergePrompts(generationId);
+                    console.log('✅ mergePrompts retry successful');
+                } else {
+                    throw error;
+                }
+            }
+
+            // Update prompts with user's edited version
+            console.log('📤 Updating prompts with user edits...');
+            await updatePromptsAPI(generationId, { prompts: mergedPrompts });
+            console.log('✅ Prompts updated with user edits');
+
+            // STEP 2: Merge complete! Now transition to Step 4
+            setIsMerging(false);
+            setIsGenerating(true);
+            setCurrentStep(4);
+            console.log('✅ [MERGING] Merge complete! Moving to Step 4...');
+
+            // STEP 3: Start actual image generation
+            console.log('⚡ [GENERATION] Calling startGeneration API...');
             await startGeneration(generationId, {
                 visualTypes: visualTypes,
             });
             console.log('✅ startGeneration API call successful');
 
-            // Poll for progress updates
+            // STEP 4: Poll for progress updates
             console.log('🔄 Starting to poll generation status...');
             const pollInterval = setInterval(async () => {
                 try {
@@ -478,11 +491,12 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             }, 600000);
 
         } catch (error) {
-            console.error('❌ Failed to start generation:', error);
-            alert('Failed to start generation. Please try again.');
+            console.error('❌ Failed during merge or generation:', error);
+            alert('Failed to generate visuals. Please try again.');
+            setIsMerging(false);
             setIsGenerating(false);
         }
-    }, [generationId]);
+    }, [generationId, mergedPrompts, selectedCollection, collectionDA]);
 
     const handleRetry = useCallback(async (index: number) => {
         if (!generationId) {
@@ -634,6 +648,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                             onBack={() => setCurrentStep(2)}
                             onGenerate={handleGenerate}
                             isGenerating={isGenerating}
+                            isMerging={isMerging}
                         />
                     )}
                     {currentStep === 4 && (
