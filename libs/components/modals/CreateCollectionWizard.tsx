@@ -739,13 +739,13 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
 
                         {currentStep === 2 && !isAnalyzing && (
                             <motion.button
-                                className={`${styles.analyzeBtn} ${(!isStep2Valid || isAnalyzing) ? styles.disabled : ''}`}
+                                className={`${styles.primaryBtn} ${(!isStep2Valid) ? styles.disabled : ''}`}
                                 onClick={handleAnalyzeStyle}
-                                disabled={!isStep2Valid || isAnalyzing}
+                                disabled={!isStep2Valid}
                                 whileTap={{ scale: 0.97 }}
                             >
-                                <Sparkles size={18} />
-                                Analyze Style
+                                Continue
+                                <ArrowRight size={18} />
                             </motion.button>
                         )}
 
