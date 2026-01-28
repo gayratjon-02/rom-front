@@ -206,8 +206,8 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
 
     try {
       const updatedCollection = await updateCollection(editingCollection.id, {
-        name: editCollectionName.trim(),
-        code: editCollectionCode.trim() || undefined
+        name: editCollectionName.trim()
+        // Note: code cannot be updated via this endpoint - it's set only during creation
       });
       // Update in brandCollections
       setBrandCollections(prev => {
@@ -603,11 +603,20 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
             <input
               type="text"
               value={editCollectionCode}
-              onChange={(e) => setEditCollectionCode(e.target.value)}
               className={styles.modalInput}
-              placeholder="Collection code (optional)"
-              style={{ marginTop: '12px' }}
+              placeholder="Collection code"
+              style={{ marginTop: '12px', opacity: 0.6, cursor: 'not-allowed' }}
+              disabled
+              title="Collection code cannot be changed after creation"
             />
+            <p style={{
+              fontSize: '11px',
+              color: 'rgba(255, 255, 255, 0.4)',
+              margin: '4px 0 0 0',
+              fontStyle: 'italic'
+            }}>
+              * Code cannot be changed after creation
+            </p>
             <div className={styles.modalActions}>
               <button className={styles.cancelBtn} onClick={() => setIsEditCollectionModalOpen(false)}>
                 Cancel
