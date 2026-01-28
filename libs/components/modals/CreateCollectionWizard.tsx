@@ -262,112 +262,94 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         setCurrentStep(prev => Math.max(prev - 1, 1));
     };
 
-    // Step 1 Submit: Create Collection Draft
+    // Step 1 Submit: Just validate and move to next step (no DB creation yet)
     const handleContinue = async () => {
         if (currentStep !== 1) {
             goToNextStep();
             return;
         }
 
-        // If collection already created, just skip to next step
-        if (createdCollection) {
-            goToNextStep();
-            return;
-        }
+        // Just move to next step - collection will be created at the end
+        goToNextStep();
+    };
+
+    // Step 2 Submit: Just validate image and move to next step (analysis happens at the end)
+    const handleAnalyzeStyle = async () => {
+        if (!uploadedImage) return;
+
+        // Just move to Step 3 - actual analysis will happen when creating collection
+        goToNextStep();
+    };
+
+    // Step 3 Submit: Create Collection + Analyze + Finalize (ALL AT ONCE)
+    const handleFinish = async () => {
+        if (!uploadedImage) return;
 
         setIsSubmitting(true);
         setError(null);
+        setAnalysisProgress(0);
+
         try {
+            // Step 1: Create Collection
             const newCol = await createCollection({
                 name: formData.name,
                 code: formData.code,
                 brand_id: brandId,
                 description: formData.description || undefined
             });
-            setCreatedCollection(newCol);
-            goToNextStep();
-        } catch (err) {
-            if (err instanceof AuthApiError) setError(err.errors.join(', '));
-            else setError('Failed to create collection');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
 
-    // Step 2 Submit: AI Analysis
-    const handleAnalyzeStyle = async () => {
-        if (!createdCollection || !uploadedImage) return;
+            // Step 2: Analyze DA with progress
+            setAnalysisProgress(30);
+            const progressInterval = setInterval(() => {
+                setAnalysisProgress(prev => Math.min(prev + 2, 85));
+            }, 200);
 
-        setIsAnalyzing(true);
-        setError(null);
-        setAnalysisProgress(0);
+            try {
+                const result = await analyzeDA(newCol.id, uploadedImage);
+                clearInterval(progressInterval);
+                setAnalysisProgress(100);
 
-        // Simulate realistic progress during API call
-        const progressInterval = setInterval(() => {
-            setAnalysisProgress(prev => {
-                // Slow down as we get closer to 90%
-                const increment = prev < 30 ? 8 : prev < 60 ? 4 : prev < 80 ? 2 : 0.5;
-                return Math.min(prev + increment, 90);
-            });
-        }, 200);
+                // Small delay to show 100%
+                await new Promise(resolve => setTimeout(resolve, 300));
 
-        try {
-            // Call API to analyze
-            const result = await analyzeDA(createdCollection.id, uploadedImage);
+                // Step 3: Update collection with DA JSON
+                const updated = await updateDAJSON(newCol.id, {
+                    analyzed_da_json: result.analyzed_da_json
+                });
 
-            // Complete progress
-            clearInterval(progressInterval);
-            setAnalysisProgress(100);
+                const finalCollection = {
+                    ...newCol,
+                    analyzed_da_json: updated.analyzed_da_json,
+                    fixed_elements: updated.fixed_elements
+                };
 
-            // Small delay to show 100% before transitioning
-            await new Promise(resolve => setTimeout(resolve, 500));
+                console.log('Collection created and finalized:', finalCollection);
 
-            setDaAnalysis(result.analyzed_da_json);
-            goToNextStep();
-        } catch (err) {
-            clearInterval(progressInterval);
-            setAnalysisProgress(0);
-            console.error('Analysis error:', err);
-            if (err instanceof AuthApiError) setError(err.errors.join(', '));
-            else setError('Failed to analyze style');
-        } finally {
-            setIsAnalyzing(false);
-        }
-    };
+                if (onCollectionCreated) {
+                    onCollectionCreated(finalCollection);
+                }
 
-    // Step 3 Submit: Finalize Collection
-    const handleFinish = async () => {
-        if (!createdCollection || !daAnalysis) return;
-
-        setIsSubmitting(true);
-        setError(null);
-
-        try {
-            const updated = await updateDAJSON(createdCollection.id, {
-                analyzed_da_json: daAnalysis
-            });
-
-            const finalCollection = {
-                ...createdCollection,
-                analyzed_da_json: updated.analyzed_da_json,
-                fixed_elements: updated.fixed_elements
-            };
-
-            console.log('Collection finalized:', finalCollection);
-
-            if (onCollectionCreated) {
-                onCollectionCreated(finalCollection);
+                handleClose();
+            } catch (analysisErr) {
+                clearInterval(progressInterval);
+                // If analysis fails, we should delete the created collection
+                // to avoid orphaned collections
+                console.error('Analysis failed, collection created but not finalized:', analysisErr);
+                if (analysisErr instanceof AuthApiError) {
+                    setError('Analysis failed: ' + analysisErr.errors.join(', '));
+                } else {
+                    setError('Failed to analyze reference image. Please try again.');
+                }
             }
-
-            handleClose();
         } catch (err) {
             if (err instanceof AuthApiError) {
                 setError(err.errors.join(', '));
             } else {
-                setError('Failed to finalize collection. Please try again.');
+                setError('Failed to create collection. Please try again.');
             }
         } finally {
             setIsSubmitting(false);
+            setAnalysisProgress(0);
         }
     };
 
@@ -628,8 +610,8 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                             </motion.div>
                         )}
 
-                        {/* Step 3: Review & Edit */}
-                        {currentStep === 3 && daAnalysis && (
+                        {/* Step 3: Review & Confirm */}
+                        {currentStep === 3 && (
                             <motion.div
                                 key="step3"
                                 custom={direction}
@@ -640,198 +622,81 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                                 className={styles.stepContent}
                             >
-                                <div className={styles.stepHeader}>
-                                    <h3>Review & Edit Visual Direction</h3>
-                                    <p>Fine-tune the AI-generated attributes for your collection</p>
-                                </div>
+                                {!isSubmitting ? (
+                                    <>
+                                        <div className={styles.stepHeader}>
+                                            <h3>Review & Confirm</h3>
+                                            <p>Review your collection details before creating</p>
+                                        </div>
 
-                                {error && (
-                                    <div className={styles.errorMessage}>{error}</div>
-                                )}
-
-                                <div className={styles.reviewLayout}>
-                                    {/* Image Preview */}
-                                    <div className={styles.reviewImageSection}>
-                                        {imagePreview && (
-                                            <img src={imagePreview} alt="DA Reference" className={styles.reviewImage} />
+                                        {error && (
+                                            <div className={styles.errorMessage}>{error}</div>
                                         )}
-                                        <div className={styles.collectionInfo}>
-                                            <h4>{formData.name}</h4>
-                                            <span className={styles.codeTag}>{formData.code}</span>
+
+                                        <div className={styles.reviewLayout}>
+                                            {/* Image Preview */}
+                                            <div className={styles.reviewImageSection}>
+                                                {imagePreview && (
+                                                    <img src={imagePreview} alt="DA Reference" className={styles.reviewImage} />
+                                                )}
+                                                <div className={styles.collectionInfo}>
+                                                    <h4>{formData.name}</h4>
+                                                    <span className={styles.codeTag}>{formData.code}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Summary Info */}
+                                            <div className={styles.reviewFields}>
+                                                <div className={styles.formGroup}>
+                                                    <label>Collection Name</label>
+                                                    <div className={styles.readOnlyValue}>{formData.name}</div>
+                                                </div>
+                                                <div className={styles.formGroup}>
+                                                    <label>Collection Code</label>
+                                                    <div className={styles.readOnlyValue}>{formData.code}</div>
+                                                </div>
+                                                {formData.description && (
+                                                    <div className={styles.formGroup}>
+                                                        <label>Description</label>
+                                                        <div className={styles.readOnlyValue}>{formData.description}</div>
+                                                    </div>
+                                                )}
+                                                <div className={styles.formGroup}>
+                                                    <label>DA Reference Image</label>
+                                                    <div className={styles.readOnlyValue}>✓ Uploaded</div>
+                                                </div>
+                                            </div>
                                         </div>
+                                    </>
+                                ) : (
+                                    /* Creating Collection & Analyzing - Loading State */
+                                    <div className={styles.analyzingContainer}>
+                                        <div className={styles.aiLoader}>
+                                            <div className={styles.aiRing}>
+                                                <div className={styles.aiRingInner} />
+                                            </div>
+                                            <Sparkles className={styles.aiIcon} size={32} />
+                                        </div>
+                                        <h3 className={styles.analyzingTitle}>
+                                            {analysisProgress < 30 ? 'Creating Collection...' : 'Analyzing Visual Style...'}
+                                        </h3>
+                                        <p className={styles.analyzingText}>
+                                            {analysisProgress < 30 && 'Setting up your collection in the database...'}
+                                            {analysisProgress >= 30 && analysisProgress < 100 && 'Claude AI is extracting visual atmosphere, lighting, and mood...'}
+                                            {analysisProgress >= 100 && 'Finalizing collection...'}
+                                        </p>
+                                        <div className={styles.analyzeProgress}>
+                                            <motion.div
+                                                className={styles.analyzeProgressFill}
+                                                style={{ width: `${analysisProgress}%` }}
+                                                transition={{ duration: 0.3, ease: 'easeOut' }}
+                                            />
+                                        </div>
+                                        <p className={styles.progressText}>
+                                            {analysisProgress}%
+                                        </p>
                                     </div>
-
-                                    {/* Editable Fields - Organized by Section */}
-                                    {daAnalysis && (
-                                        <div className={styles.reviewFields}>
-                                            {/* Background Section */}
-                                            <div className={styles.sectionDivider}>
-                                                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Background</h4>
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Background Color</label>
-                                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                                    <div style={{
-                                                        width: '48px',
-                                                        height: '48px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: daAnalysis.background?.color_hex || '#ffffff',
-                                                        border: '2px solid var(--wizard-border)',
-                                                        flexShrink: 0,
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                                    }} />
-                                                    <input
-                                                        type="text"
-                                                        value={daAnalysis.background?.color_hex || ''}
-                                                        onChange={e => handleAnalysisChange('background.color_hex', e.target.value)}
-                                                        className={styles.input}
-                                                        placeholder="#HEXCODE"
-                                                        style={{ width: '120px' }}
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={daAnalysis.background?.color_name || ''}
-                                                        onChange={e => handleAnalysisChange('background.color_name', e.target.value)}
-                                                        className={styles.input}
-                                                        placeholder="Color Name"
-                                                        style={{ flex: 1 }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Background Description</label>
-                                                <textarea
-                                                    value={daAnalysis.background?.description || ''}
-                                                    onChange={e => handleAnalysisChange('background.description', e.target.value)}
-                                                    className={styles.textarea}
-                                                    rows={2}
-                                                    placeholder="e.g., Burgundy studio wall with soft texture"
-                                                />
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Background Texture</label>
-                                                <input
-                                                    type="text"
-                                                    value={daAnalysis.background?.texture || ''}
-                                                    onChange={e => handleAnalysisChange('background.texture', e.target.value)}
-                                                    className={styles.input}
-                                                    placeholder="e.g., Concrete, Velvet, Seamless Paper"
-                                                />
-                                            </div>
-
-                                            {/* Lighting Section */}
-                                            <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
-                                                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Lighting</h4>
-                                            </div>
-
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                                <div className={styles.formGroup}>
-                                                    <label>Type</label>
-                                                    <input
-                                                        type="text"
-                                                        value={daAnalysis.lighting?.type || ''}
-                                                        onChange={e => handleAnalysisChange('lighting.type', e.target.value)}
-                                                        className={styles.input}
-                                                        placeholder="e.g., Soft Natural"
-                                                    />
-                                                </div>
-
-                                                <div className={styles.formGroup}>
-                                                    <label>Direction</label>
-                                                    <input
-                                                        type="text"
-                                                        value={daAnalysis.lighting?.direction || ''}
-                                                        onChange={e => handleAnalysisChange('lighting.direction', e.target.value)}
-                                                        className={styles.input}
-                                                        placeholder="e.g., Front-lit"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                                <div className={styles.formGroup}>
-                                                    <label>Temperature</label>
-                                                    <input
-                                                        type="text"
-                                                        value={daAnalysis.lighting?.temperature || ''}
-                                                        onChange={e => handleAnalysisChange('lighting.temperature', e.target.value)}
-                                                        className={styles.input}
-                                                        placeholder="e.g., Warm 3000K"
-                                                    />
-                                                </div>
-
-                                                <div className={styles.formGroup}>
-                                                    <label>Intensity</label>
-                                                    <input
-                                                        type="text"
-                                                        value={daAnalysis.lighting?.intensity || ''}
-                                                        onChange={e => handleAnalysisChange('lighting.intensity', e.target.value)}
-                                                        className={styles.input}
-                                                        placeholder="e.g., Medium"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Props Section */}
-                                            <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
-                                                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Props & Styling</h4>
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Props Style</label>
-                                                <textarea
-                                                    value={daAnalysis.props?.style || ''}
-                                                    onChange={e => handleAnalysisChange('props.style', e.target.value)}
-                                                    className={styles.textarea}
-                                                    rows={2}
-                                                    placeholder="e.g., Playful romantic Valentine theme"
-                                                />
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Props Placement</label>
-                                                <input
-                                                    type="text"
-                                                    value={daAnalysis.props?.placement || ''}
-                                                    onChange={e => handleAnalysisChange('props.placement', e.target.value)}
-                                                    className={styles.input}
-                                                    placeholder="e.g., Heart props on left and right sides"
-                                                />
-                                            </div>
-
-                                            {/* Mood */}
-                                            <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
-                                                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Atmosphere</h4>
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Mood</label>
-                                                <input
-                                                    type="text"
-                                                    value={daAnalysis.mood || ''}
-                                                    onChange={e => handleAnalysisChange('mood', e.target.value)}
-                                                    className={styles.input}
-                                                    placeholder="e.g., Romantic, Playful, Minimalist"
-                                                />
-                                            </div>
-
-                                            {/* Composition */}
-                                            <div className={styles.formGroup}>
-                                                <label>Composition Framing</label>
-                                                <input
-                                                    type="text"
-                                                    value={daAnalysis.composition?.framing || ''}
-                                                    onChange={e => handleAnalysisChange('composition.framing', e.target.value)}
-                                                    className={styles.input}
-                                                    placeholder="e.g., Medium shot, centered"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
