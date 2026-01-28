@@ -190,7 +190,7 @@ const EditCollectionModal: React.FC<EditCollectionModalProps> = ({
                         <div className={styles.reviewFields}>
                             {/* Basic Info Section */}
                             <div className={styles.sectionDivider}>
-                                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Basic Information</h4>
+                                <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#ffffff' }}>Basic Information</h4>
                             </div>
 
                             <div className={styles.formGroup}>
@@ -234,7 +234,7 @@ const EditCollectionModal: React.FC<EditCollectionModalProps> = ({
                                 <>
                                     {/* Background Section */}
                                     <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
-                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Background</h4>
+                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#ffffff' }}>Background</h4>
                                     </div>
 
                                     <div className={styles.formGroup}>
@@ -292,7 +292,7 @@ const EditCollectionModal: React.FC<EditCollectionModalProps> = ({
 
                                     {/* Lighting Section */}
                                     <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
-                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Lighting</h4>
+                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#ffffff' }}>Lighting</h4>
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -345,7 +345,7 @@ const EditCollectionModal: React.FC<EditCollectionModalProps> = ({
 
                                     {/* Props Section */}
                                     <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
-                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Props & Styling</h4>
+                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#ffffff' }}>Props & Styling</h4>
                                     </div>
 
                                     <div className={styles.formGroup}>
@@ -372,7 +372,7 @@ const EditCollectionModal: React.FC<EditCollectionModalProps> = ({
 
                                     {/* Atmosphere */}
                                     <div className={styles.sectionDivider} style={{ marginTop: '24px' }}>
-                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: 'var(--wizard-text-primary)' }}>Atmosphere</h4>
+                                        <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#ffffff' }}>Atmosphere</h4>
                                     </div>
 
                                     <div className={styles.formGroup}>
