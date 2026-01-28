@@ -260,7 +260,44 @@
       font-size: 2.5rem;
     }
   }
+}
+
+/* Mobile Tab Switcher - Only visible on mobile */
+.mobileTabSwitcher {
+  display: none; /* Hidden on desktop */
   
-  /* Adjust Animation reset for mobile? */
-  /* Since we force left:0 !important, the JS animation will run but do nothing visually, which is fine. */
+  @media (max-width: 768px) {
+    display: flex;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+}
+
+.mobileTab {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  
+  &.active {
+    background: rgba(255, 64, 129, 0.3);
+    color: #ff4081;
+    box-shadow: 0 2px 10px rgba(255, 64, 129, 0.2);
+  }
+  
+  &:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+  }
 }

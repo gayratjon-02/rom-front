@@ -322,6 +322,24 @@ const SignupPage = () => {
         {/* Overlay Card (Slides) */}
         <div className={styles.overlayCard} ref={overlayRef}>
           <div className={styles.formContent}>
+            {/* Mobile Tab Switcher - Only visible on mobile */}
+            <div className={styles.mobileTabSwitcher}>
+              <button
+                className={`${styles.mobileTab} ${!isSignup ? styles.active : ''}`}
+                onClick={() => setIsSignup(false)}
+                disabled={isLoading}
+              >
+                Sign In
+              </button>
+              <button
+                className={`${styles.mobileTab} ${isSignup ? styles.active : ''}`}
+                onClick={() => setIsSignup(true)}
+                disabled={isLoading}
+              >
+                Sign Up
+              </button>
+            </div>
+
             <h1>ROMIMI</h1>
             <h2>{isSignup ? "Create Account" : "Welcome Back"}</h2>
 
