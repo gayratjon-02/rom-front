@@ -202,6 +202,8 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   const handleBrandCreated = (newBrand: Brand) => {
     console.log('New brand created:', newBrand);
     if (onBrandCreated) onBrandCreated();
+    // Auto-open collection wizard for the new brand (Seamless DA creation)
+    handleCreateCollectionClick(newBrand);
   };
 
   // Edit brand handlers
@@ -337,15 +339,6 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
               </span>
               <span className={styles.label}>Ad Recreation</span>
             </button>
-
-            {/* Create New Brand Button */}
-            <button
-              className={styles.createBrandButton}
-              onClick={() => setIsBrandModalOpen(true)}
-            >
-              <span className={styles.addIcon}>+</span>
-              <span className={styles.label}>Create New Brand</span>
-            </button>
           </div>
 
           {/* Product Upload Section */}
@@ -364,21 +357,12 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
             />
           )}
 
-          {/* JSON Preview Panel */}
-          <JSONPreviewPanel
-            isDarkMode={isDarkMode}
-            productJSON={productJSON || null}
-            daJSON={daJSON || null}
-            mergedPrompts={mergedPrompts}
-            onPromptsChange={onPromptsChange}
-            isAnalyzing={isAnalyzing}
-          />
-
-          {/* LIBRARY Section */}
+          {/* Design Aesthetics Section (formerly Library) */}
           <div className={styles.section}>
-            <div className={styles.sectionTitle}>Library</div>
+            <div className={styles.sectionTitle}>Design Aesthetics</div>
 
             <button
+
               className={`${styles.menuItem} ${activeBrandId === null && activeMenu === '' ? styles.active : ''}`}
               onClick={() => {
                 setActiveBrandId(null);
@@ -534,10 +518,16 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
             })}
 
             {/* No brands message */}
+            {/* No brands/DA message - Show Create DA Button */}
             {!isLoadingBrands && brands.length === 0 && (
-              <div className={styles.emptyMessage}>
-                No brands yet. Create your first brand!
-              </div>
+              <button
+                className={styles.createBrandButton}
+                onClick={() => setIsBrandModalOpen(true)}
+                style={{ marginTop: '10px', width: '100%', justifyContent: 'center' }}
+              >
+                <span className={styles.addIcon}>+</span>
+                <span className={styles.label}>Create Design Aesthetic</span>
+              </button>
             )}
           </div>
         </div>
