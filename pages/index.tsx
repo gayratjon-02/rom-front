@@ -254,6 +254,79 @@ function Home() {
     }
   }, [frontImage, backImage, referenceImages, daJSON]);
 
+  // Handle Analysis Update (from Edit Mode)
+  const handleAnalysisUpdate = useCallback((updatedResponse: any) => {
+    console.log('🔄 Product Analysis Updated:', updatedResponse);
+    setFullAnalysisResponse(updatedResponse);
+
+    // Update ProductJSON state if analysis data changed
+    if (updatedResponse.analysis) {
+      // Re-map analysis to productJSON format if needed, 
+      // or if the structure matches, just use it. 
+      // Since we are saving "final_product_json" which matches AnalyzedProductJSON,
+      // we might need to re-map using the same logic as in handleAnalyze
+      // OR simply update the parts that match.
+
+      // For simplicity, let's re-use the mapping logic or assume updatedResponse.analysis IS the ProductJSON source
+      // ideally we should extract this mapping logic to a helper function.
+      // But for now, let's update what we can.
+
+      const analysis = updatedResponse.analysis;
+
+      // Use helper from handleAnalyze scope if possible, but it's inside useCallback.
+      // Let's simplified mapping here or just trust the response structure if it's consistent.
+      // The backend returns proper AnalyzedProductJSON structure in final_product_json.
+
+      const getLogoDesc = (field: any): string => {
+        if (!field) return 'None';
+        if (typeof field === 'string') return field;
+        if (typeof field === 'object' && field !== null) {
+          const parts: string[] = [];
+          if (field.type) parts.push(field.type);
+          if (field.color && field.color.toLowerCase() !== 'unknown') parts.push(`(${field.color})`);
+          if (field.position) parts.push(`at ${field.position}`);
+          if (parts.length > 0) return parts.join(' ');
+          if (field.description) return field.description;
+          return JSON.stringify(field).replace(/[{}\"]/g, '').replace(/,/g, ', ');
+        }
+        return String(field);
+      };
+
+      const newProductJSON: ProductJSON = {
+        type: analysis.general_info?.product_name || updatedResponse.name || 'Product',
+        color: analysis.colors?.primary?.name || 'Not detected',
+        color_hex: analysis.colors?.primary?.hex || '#000000',
+        texture: analysis.texture_description || 'Not detected',
+        material: Array.isArray(analysis.materials) ? analysis.materials.join(', ') : 'Not detected',
+        details: (() => {
+          const detailsParts: string[] = [];
+          if (analysis.design_elements && Array.isArray(analysis.design_elements)) detailsParts.push(...analysis.design_elements);
+          if (analysis.style_keywords && Array.isArray(analysis.style_keywords)) detailsParts.push(...analysis.style_keywords);
+          if (analysis.additional_details) detailsParts.push(analysis.additional_details);
+          return detailsParts.join(', ') || 'No details detected';
+        })(),
+        logo_front: getLogoDesc(analysis.logo_front),
+        logo_back: getLogoDesc(analysis.logo_back),
+      };
+
+      setProductJSON(newProductJSON);
+
+      // Re-generate local prompts with updated data
+      const da = daJSON || mockDAAnalysis;
+      const basePrompt = `A ${newProductJSON.type} in ${newProductJSON.color} (${newProductJSON.color_hex}) ${newProductJSON.material}. Texture: ${newProductJSON.texture}. ${newProductJSON.details}. Shot in ${da.background.description} with ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.mood} aesthetic.`;
+
+      const prompts: Record<string, string> = {
+        duo: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
+        solo: `Male Model solo shot. ${basePrompt} Professional pose.`,
+        flatlay_front: `Flatlay front view. ${basePrompt} Clean arrangement.`,
+        flatlay_back: `Flatlay angled back view. ${basePrompt} Detail focus.`,
+        closeup_front: `Close-up detail front. Focus on ${newProductJSON.material} texture and ${newProductJSON.logo_front}. ${da.background.description}.`,
+        closeup_back: `Close-up detail back. Focus on features and ${newProductJSON.logo_back}. ${da.background.description}.`,
+      };
+      setMergedPrompts(prompts);
+    }
+  }, [daJSON]);
+
   // Handle Generation
   const handleGenerate = useCallback(async (visualTypes: string[]) => {
     console.log('🚀 Generate clicked with:', visualTypes);
@@ -483,6 +556,8 @@ function Home() {
               backImage={backImage}
               productJSON={productJSON}
               fullAnalysisResponse={fullAnalysisResponse}
+              productId={productId}
+              onAnalysisUpdate={handleAnalysisUpdate}
               daJSON={daJSON}
               mergedPrompts={mergedPrompts}
               selectedShots={selectedShots}

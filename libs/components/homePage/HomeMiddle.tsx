@@ -39,6 +39,7 @@ interface HomeMiddleProps {
     backImage?: File | null;
     productJSON?: ProductJSON | null;
     fullAnalysisResponse?: any; // Full backend response for display
+    productId?: string | null; // Product ID for editing
     daJSON?: DAJSON | null;
     mergedPrompts?: Record<string, string>;
     selectedShots?: string[];
@@ -46,6 +47,7 @@ interface HomeMiddleProps {
     isAnalyzing?: boolean;
     onProductAnalyzed?: (json: ProductJSON, productId: string) => void;
     onGenerationIdCreated?: (id: string) => void;
+    onAnalysisUpdate?: (updatedResponse: any) => void; // Callback for JSON updates
 }
 
 export interface ProductJSON {
@@ -141,10 +143,24 @@ interface AnalyzedStateProps {
     productJSON: ProductJSON;
     fullAnalysisResponse?: any;
     daJSON?: DAJSON | null;
+    productId?: string;
+    onAnalysisUpdate?: (updatedResponse: any) => void;
 }
 
-const AnalyzedState: React.FC<AnalyzedStateProps> = ({ isDarkMode, productJSON, fullAnalysisResponse, daJSON }) => {
-    const [activeTab, setActiveTab] = useState<'full' | 'analysis' | 'da'>('full');
+const AnalyzedState: React.FC<AnalyzedStateProps> = ({
+    isDarkMode,
+    productJSON,
+    fullAnalysisResponse,
+    daJSON,
+    productId,
+    onAnalysisUpdate
+}) => {
+    const [activeTab, setActiveTab] = useState<'full' | 'analysis' | 'da'>('analysis');
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedJson, setEditedJson] = useState<string>('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     // Format JSON for display
     const formatJSON = (obj: any) => JSON.stringify(obj, null, 2);
@@ -152,10 +168,116 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({ isDarkMode, productJSON, 
     // Full response to display
     const displayResponse = fullAnalysisResponse || {
         success: true,
-        product_id: 'N/A',
+        product_id: productId || 'N/A',
         name: productJSON.type,
         category: productJSON.type,
         analysis: productJSON,
+    };
+
+    // Get current JSON for editing based on active tab
+    const getCurrentJson = () => {
+        if (activeTab === 'analysis') {
+            return displayResponse.analysis;
+        } else if (activeTab === 'da' && daJSON) {
+            return daJSON;
+        }
+        return displayResponse;
+    };
+
+    // Start editing
+    const handleEdit = () => {
+        setEditedJson(formatJSON(getCurrentJson()));
+        setIsEditing(true);
+        setSaveError(null);
+        setSaveSuccess(false);
+    };
+
+    // Cancel editing
+    const handleCancel = () => {
+        setIsEditing(false);
+        setEditedJson('');
+        setSaveError(null);
+    };
+
+    // Save changes
+    const handleSave = async () => {
+        if (!productId) {
+            setSaveError('Product ID not available');
+            return;
+        }
+
+        try {
+            // Validate JSON
+            const parsedJson = JSON.parse(editedJson);
+
+            setIsSaving(true);
+            setSaveError(null);
+
+            // Import and call API
+            const { updateProductJsonNew } = await import('@/libs/server/HomePage/product');
+            const response = await updateProductJsonNew(productId, parsedJson);
+
+            console.log('✅ Product JSON updated:', response);
+
+            // Update parent state
+            if (onAnalysisUpdate && response.final_product_json) {
+                onAnalysisUpdate({
+                    ...fullAnalysisResponse,
+                    analysis: response.final_product_json,
+                });
+            }
+
+            setSaveSuccess(true);
+            setIsEditing(false);
+
+            // Clear success message after 3 seconds
+            setTimeout(() => setSaveSuccess(false), 3000);
+
+        } catch (error: any) {
+            console.error('Save failed:', error);
+            if (error instanceof SyntaxError) {
+                setSaveError('Invalid JSON format. Please check your syntax.');
+            } else {
+                setSaveError(error?.messages?.join(', ') || error?.message || 'Failed to save');
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    // Reset to original
+    const handleReset = async () => {
+        if (!productId) {
+            setSaveError('Product ID not available');
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            setSaveError(null);
+
+            const { resetProductJson } = await import('@/libs/server/HomePage/product');
+            const response = await resetProductJson(productId);
+
+            console.log('✅ Product JSON reset:', response);
+
+            // Update parent state
+            if (onAnalysisUpdate && response.analyzed_product_json) {
+                onAnalysisUpdate({
+                    ...fullAnalysisResponse,
+                    analysis: response.analyzed_product_json,
+                });
+            }
+
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+
+        } catch (error: any) {
+            console.error('Reset failed:', error);
+            setSaveError(error?.messages?.join(', ') || error?.message || 'Failed to reset');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -198,35 +320,98 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({ isDarkMode, productJSON, 
                 </div>
             )}
 
-            <div className={styles.jsonTabs}>
-                <button
-                    className={`${styles.jsonTab} ${activeTab === 'full' ? styles.active : ''}`}
-                    onClick={() => setActiveTab('full')}
-                >
-                    Full Response
-                </button>
-                <button
-                    className={`${styles.jsonTab} ${activeTab === 'analysis' ? styles.active : ''}`}
-                    onClick={() => setActiveTab('analysis')}
-                >
-                    Analysis Details
-                </button>
-                {daJSON && (
+            {/* Tabs and Edit Controls */}
+            <div className={styles.jsonControls}>
+                <div className={styles.jsonTabs}>
                     <button
-                        className={`${styles.jsonTab} ${activeTab === 'da' ? styles.active : ''}`}
-                        onClick={() => setActiveTab('da')}
+                        className={`${styles.jsonTab} ${activeTab === 'full' ? styles.active : ''}`}
+                        onClick={() => { setActiveTab('full'); setIsEditing(false); }}
                     >
-                        DA JSON
+                        Full Response
                     </button>
+                    <button
+                        className={`${styles.jsonTab} ${activeTab === 'analysis' ? styles.active : ''}`}
+                        onClick={() => { setActiveTab('analysis'); setIsEditing(false); }}
+                    >
+                        Analysis Details
+                    </button>
+                    {daJSON && (
+                        <button
+                            className={`${styles.jsonTab} ${activeTab === 'da' ? styles.active : ''}`}
+                            onClick={() => { setActiveTab('da'); setIsEditing(false); }}
+                        >
+                            DA JSON
+                        </button>
+                    )}
+                </div>
+
+                {/* Edit/Save/Reset Buttons */}
+                {activeTab === 'analysis' && productId && (
+                    <div className={styles.editControls}>
+                        {!isEditing ? (
+                            <>
+                                <button className={styles.editBtn} onClick={handleEdit}>
+                                    <Plus size={14} />
+                                    Edit
+                                </button>
+                                <button className={styles.resetBtn} onClick={handleReset} disabled={isSaving}>
+                                    <RefreshCw size={14} className={isSaving ? styles.spin : ''} />
+                                    Reset
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    className={styles.saveBtn}
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? (
+                                        <Loader2 size={14} className={styles.spin} />
+                                    ) : (
+                                        <CheckCircle2 size={14} />
+                                    )}
+                                    {isSaving ? 'Saving...' : 'Save'}
+                                </button>
+                                <button className={styles.cancelBtn} onClick={handleCancel}>
+                                    Cancel
+                                </button>
+                            </>
+                        )}
+                    </div>
                 )}
             </div>
 
+            {/* Error/Success Messages */}
+            {saveError && (
+                <div className={styles.errorMessage}>
+                    <AlertCircle size={16} />
+                    {saveError}
+                </div>
+            )}
+            {saveSuccess && (
+                <div className={styles.successMessage}>
+                    <CheckCircle2 size={16} />
+                    Changes saved successfully!
+                </div>
+            )}
+
+            {/* JSON Display/Editor */}
             <div className={styles.jsonContainer}>
-                <pre className={styles.jsonContent}>
-                    {activeTab === 'full' && formatJSON(displayResponse)}
-                    {activeTab === 'analysis' && formatJSON(displayResponse.analysis)}
-                    {activeTab === 'da' && daJSON && formatJSON(daJSON)}
-                </pre>
+                {isEditing ? (
+                    <textarea
+                        className={styles.jsonEditor}
+                        value={editedJson}
+                        onChange={(e) => setEditedJson(e.target.value)}
+                        spellCheck={false}
+                    />
+                ) : (
+                    <pre className={styles.jsonContent}>
+                        {activeTab === 'full' && formatJSON(displayResponse)}
+                        {activeTab === 'analysis' && formatJSON(displayResponse.analysis)}
+                        {activeTab === 'da' && daJSON && formatJSON(daJSON)}
+                    </pre>
+                )}
             </div>
 
             <div className={styles.nextStepHint}>
