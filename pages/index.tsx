@@ -148,33 +148,35 @@ function Home() {
     })();
   }, [selectedCollection?.id]);
 
-  // Handle Product Analysis
+  // Handle Product Analysis - Uses analyzeProductDirect API (NO collection needed!)
   const handleAnalyze = useCallback(async () => {
-    if (!frontImage || !backImage) {
-      alert('Iltimos, old va orqa rasmlarni yuklang.');
-      return;
-    }
-
-    if (!selectedCollection) {
-      alert('Iltimos, avval kolleksiyani tanlang.');
+    // At least one image is required (front OR back)
+    if (!frontImage && !backImage) {
+      alert('Iltimos, kamida bitta rasm yuklang (old yoki orqa).');
       return;
     }
 
     setIsAnalyzing(true);
     try {
-      // 1. Create Product
-      const productName = `Product ${new Date().toLocaleString()}`;
-      const product = await createProduct(
-        productName,
-        selectedCollection.id,
-        frontImage,
-        backImage,
-        []
+      // 1. Import analyzeProductDirect API 
+      const { analyzeProductDirect } = await import('@/libs/server/HomePage/product');
+
+      // 2. Prepare images - at least front or back required
+      const frontImages = frontImage ? [frontImage] : [];
+      const backImages = backImage ? [backImage] : [];
+
+      // 3. Call analyzeProductDirect API (NO collection needed!)
+      const response = await analyzeProductDirect(
+        frontImages,
+        backImages,
+        referenceImages,
+        undefined // product_name - optional
       );
 
-      // 2. Analyze Product
-      const analysisResponse = await analyzeProduct(product.id);
-      const json = analysisResponse.analyzed_product_json;
+      console.log('✅ Product analyzed:', response);
+
+      // 4. Extract analysis data
+      const analysis = response.analysis;
 
       // Helper to safely extract logo description
       const getLogoDesc = (field: any): string => {
@@ -194,35 +196,34 @@ function Home() {
         return String(field);
       };
 
-      // 3. Map result to state
+      // 5. Map result to state
       const mappedAnalysis: ProductJSON = {
-        type: json.product_type || json.productType || 'Product type not detected',
-        color: json.color_name || json.colorName || 'Color not detected',
-        color_hex: json.color_hex || json.colorHex || '#000000',
-        texture: json.texture_description || json.textureDescription || 'Texture not detected',
-        material: json.material || 'Material not detected',
+        type: analysis.general_info?.product_name || response.name || 'Product',
+        color: analysis.colors?.primary?.name || 'Not detected',
+        color_hex: analysis.colors?.primary?.hex || '#000000',
+        texture: analysis.texture_description || 'Not detected',
+        material: Array.isArray(analysis.materials) ? analysis.materials.join(', ') : 'Not detected',
         details: (() => {
           const detailsParts: string[] = [];
-          if (json.details && typeof json.details === 'object') {
-            Object.entries(json.details).forEach(([_, value]) => {
-              if (value && value !== 'Unknown' && value !== 'N/A') {
-                detailsParts.push(`${value}`);
-              }
-            });
+          if (analysis.design_elements && Array.isArray(analysis.design_elements)) {
+            detailsParts.push(...analysis.design_elements);
           }
-          if (json.additional_details && Array.isArray(json.additional_details)) {
-            detailsParts.push(...json.additional_details);
+          if (analysis.style_keywords && Array.isArray(analysis.style_keywords)) {
+            detailsParts.push(...analysis.style_keywords);
+          }
+          if (analysis.additional_details) {
+            detailsParts.push(analysis.additional_details);
           }
           return detailsParts.join(', ') || 'No details detected';
         })(),
-        logo_front: getLogoDesc(json.logo_front),
-        logo_back: getLogoDesc(json.logo_back),
+        logo_front: getLogoDesc(analysis.logo_front),
+        logo_back: getLogoDesc(analysis.logo_back),
       };
 
       setProductJSON(mappedAnalysis);
-      setProductId(product.id);
+      setProductId(response.product_id);
 
-      // 4. Generate prompts locally
+      // 6. Generate prompts locally (DA can be selected later)
       const da = daJSON || mockDAAnalysis;
       const basePrompt = `A ${mappedAnalysis.type} in ${mappedAnalysis.color} (${mappedAnalysis.color_hex}) ${mappedAnalysis.material}. Texture: ${mappedAnalysis.texture}. ${mappedAnalysis.details}. Shot in ${da.background.description} with ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.mood} aesthetic.`;
 
@@ -237,22 +238,17 @@ function Home() {
 
       setMergedPrompts(prompts);
 
-      // 5. Create generation ID
-      const generation = await createGeneration({
-        product_id: product.id,
-        collection_id: selectedCollection.id,
-        generation_type: 'product_visuals',
-      });
-      setGenerationId(generation.id);
+      // 7. Note: Generation ID will be created when user clicks Generate
+      // (DA preset must be selected first in the new flow)
 
     } catch (error: any) {
       console.error('Analysis failed:', error);
-      const errorMessage = error?.message || 'Unknown error';
+      const errorMessage = error?.messages?.join(', ') || error?.message || 'Unknown error';
       alert(`Tahlil qilish muvaffaqiyatsiz: ${errorMessage}`);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [frontImage, backImage, selectedCollection, daJSON]);
+  }, [frontImage, backImage, referenceImages, daJSON]);
 
   // Handle Generation
   const handleGenerate = useCallback(async (visualTypes: string[]) => {
