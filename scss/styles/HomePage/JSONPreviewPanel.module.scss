@@ -1,0 +1,496 @@
+// JSONPreviewPanel SCSS Module
+
+.container {
+    border-radius: 12px;
+    border: 1px solid;
+    overflow: hidden;
+    transition: all 0.3s ease;
+
+    &.dark {
+        background: rgba(20, 20, 35, 0.6);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    &.light {
+        background: rgba(255, 255, 255, 0.8);
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    &.expanded {
+        &.dark {
+            background: rgba(20, 20, 35, 0.9);
+        }
+
+        &.light {
+            background: rgba(255, 255, 255, 0.95);
+        }
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    .dark & {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.7);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+    }
+
+    .light & {
+        background: transparent;
+        color: rgba(0, 0, 0, 0.7);
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+    }
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tabIndicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+
+    .dark & {
+        background: rgba(255, 255, 255, 0.1);
+
+        &.hasData {
+            background: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.1);
+
+        &.hasData {
+            background: #16a34a;
+            box-shadow: 0 0 8px rgba(22, 163, 74, 0.3);
+        }
+    }
+}
+
+.content {
+    border-top: 1px solid;
+
+    .dark & {
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .light & {
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+
+    .dark & {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.03);
+    }
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+
+    .dark & {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.5);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        &.active {
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc;
+        }
+    }
+
+    .light & {
+        background: transparent;
+        color: rgba(0, 0, 0, 0.5);
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: rgba(0, 0, 0, 0.8);
+        }
+
+        &.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: #4f46e5;
+        }
+    }
+}
+
+.dataDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    margin-left: 4px;
+}
+
+.panelWrapper {
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        border-radius: 3px;
+
+        .dark & {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .light & {
+            background: rgba(0, 0, 0, 0.1);
+        }
+    }
+}
+
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.section {
+    h4 {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid;
+
+        .dark & {
+            color: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .light & {
+            color: rgba(0, 0, 0, 0.4);
+            border-color: rgba(0, 0, 0, 0.05);
+        }
+    }
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fieldLabel {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+
+    .dark & {
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .light & {
+        color: rgba(0, 0, 0, 0.4);
+    }
+}
+
+.fieldValue {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+
+    span {
+        font-size: 13px;
+        line-height: 1.5;
+        flex: 1;
+
+        .dark & {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .light & {
+            color: rgba(0, 0, 0, 0.9);
+        }
+    }
+}
+
+.editBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    flex-shrink: 0;
+
+    .field:hover &,
+    .promptHeader:hover & {
+        opacity: 1;
+    }
+
+    .dark & {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.6);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+        }
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.05);
+        color: rgba(0, 0, 0, 0.5);
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: rgba(0, 0, 0, 0.8);
+        }
+    }
+}
+
+.editContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.editInput {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 36px;
+
+    .dark & {
+        background: rgba(0, 0, 0, 0.3);
+        border-color: rgba(99, 102, 241, 0.5);
+        color: #fff;
+
+        &:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+        }
+    }
+
+    .light & {
+        background: #fff;
+        border-color: rgba(99, 102, 241, 0.4);
+        color: #000;
+
+        &:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+    }
+}
+
+.editActions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.saveBtn,
+.cancelBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saveBtn {
+    background: #22c55e;
+    color: #fff;
+
+    &:hover {
+        background: #16a34a;
+    }
+}
+
+.cancelBtn {
+    .dark & {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.05);
+        color: rgba(0, 0, 0, 0.6);
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+    }
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px;
+    text-align: center;
+
+    .dark & {
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .light & {
+        color: rgba(0, 0, 0, 0.4);
+    }
+
+    span {
+        font-size: 13px;
+    }
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+
+    .dark & {
+        border-color: rgba(255, 255, 255, 0.1);
+        border-top-color: #8b5cf6;
+    }
+
+    .light & {
+        border-color: rgba(0, 0, 0, 0.1);
+        border-top-color: #6366f1;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.promptItem {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid;
+
+    .dark & {
+        background: rgba(0, 0, 0, 0.2);
+        border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.02);
+        border-color: rgba(0, 0, 0, 0.05);
+    }
+}
+
+.promptHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.promptLabel {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+
+    .dark & {
+        color: #a5b4fc;
+    }
+
+    .light & {
+        color: #4f46e5;
+    }
+}
+
+.promptText {
+    font-size: 12px;
+    line-height: 1.6;
+    margin: 0;
+
+    .dark & {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .light & {
+        color: rgba(0, 0, 0, 0.8);
+    }
+}

@@ -1,17 +1,22 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { Package, Sparkles, Wand2, Check } from 'lucide-react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+    Image as ImageIcon,
+    Loader2,
+    RefreshCw,
+    Download,
+    AlertCircle,
+    CheckCircle2,
+    Sparkles,
+    Plus,
+    ZoomIn,
+} from 'lucide-react';
 import styles from '@/scss/styles/HomePage/HomeMiddle.module.scss';
-import ProductStep1_Upload from './ProductStep1_Upload';
-import ProductStep2_Analysis, { ProductAnalysis } from './ProductStep2_Analysis';
-import ProductStep3_MergePreview from './ProductStep3_MergePreview';
-import ProductStep4_Results from './ProductStep4_Results';
 import { createProduct, analyzeProduct } from '@/libs/server/HomePage/product';
 import { AnalyzedProductJSON } from '@/libs/types/homepage/product';
 import { Brand } from '@/libs/types/homepage/brand';
-// 🆕 Generation API imports
 import {
     startGeneration,
     pollGenerationStatus,
@@ -29,9 +34,65 @@ interface HomeMiddleProps {
     isDarkMode?: boolean;
     selectedCollection?: { id: string; name: string } | null;
     selectedBrand?: Brand | null;
+    // NEW: Props from parent for single-page layout
+    frontImage?: File | null;
+    backImage?: File | null;
+    productJSON?: ProductJSON | null;
+    daJSON?: DAJSON | null;
+    mergedPrompts?: Record<string, string>;
+    selectedShots?: string[];
+    ageMode?: 'adult' | 'kid';
+    isAnalyzing?: boolean;
+    onProductAnalyzed?: (json: ProductJSON, productId: string) => void;
+    onGenerationIdCreated?: (id: string) => void;
 }
 
-type MergedPrompts = Record<string, string>;
+export interface ProductJSON {
+    type: string;
+    color: string;
+    color_hex: string;
+    texture: string;
+    material: string;
+    details: string;
+    logo_front: string;
+    logo_back: string;
+}
+
+export interface DAJSON {
+    background: {
+        color_hex: string;
+        color_name: string;
+        description: string;
+        texture?: string;
+    };
+    props: {
+        items: string[];
+        placement: string;
+        style: string;
+    };
+    mood: string;
+    lighting: {
+        type: string;
+        temperature: string;
+        direction: string;
+        intensity: string;
+    };
+    composition: {
+        layout: string;
+        poses: string;
+        framing: string;
+    };
+    styling?: {
+        bottom?: string;
+        feet?: string;
+    };
+    camera: {
+        focal_length_mm: number;
+        aperture: number;
+        focus: string;
+    };
+    quality: string;
+}
 
 interface VisualOutput {
     type: string;
@@ -40,82 +101,204 @@ interface VisualOutput {
     error?: string;
 }
 
-// Mock DA Analysis matching AnalyzedDAJSON interface (from collection setup)
-const mockDAAnalysis = {
-    background: {
-        color_hex: '#FFFFFF',
-        color_name: 'White',
-        description: 'Clean white cyclorama with soft natural shadows',
-        texture: 'smooth matte',
-    },
-    props: {
-        items: ['Minimalist wooden stool', 'Dried pampas grass'],
-        placement: 'asymmetric sides',
-        style: 'modern minimalist',
-    },
-    mood: 'Serene, sophisticated, effortlessly elegant',
-    lighting: {
-        type: 'softbox',
-        temperature: 'warm golden hour',
-        direction: 'front-left 45°',
-        intensity: 'medium-soft',
-    },
-    composition: {
-        layout: 'centered editorial',
-        poses: 'relaxed natural',
-        framing: 'full body with headroom',
-    },
-    styling: {
-        bottom: 'dark slim trousers',
-        feet: 'white minimalist sneakers',
-    },
-    camera: {
-        focal_length_mm: 85,
-        aperture: 2.8,
-        focus: 'subject eyes',
-    },
-    quality: 'professional editorial',
-    analyzed_at: new Date().toISOString(),
+// Empty state for no visuals
+const EmptyState: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => (
+    <motion.div
+        className={styles.emptyState}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+    >
+        <div className={styles.emptyIcon}>
+            <Sparkles size={48} />
+        </div>
+        <h2>Ready to Generate</h2>
+        <p>
+            Upload product images in the sidebar, select a DA preset,
+            choose your shot types below, and click Generate.
+        </p>
+        <div className={styles.emptySteps}>
+            <div className={styles.emptyStep}>
+                <span className={styles.stepNumber}>1</span>
+                <span>Upload Product</span>
+            </div>
+            <div className={styles.emptyStep}>
+                <span className={styles.stepNumber}>2</span>
+                <span>Select DA</span>
+            </div>
+            <div className={styles.emptyStep}>
+                <span className={styles.stepNumber}>3</span>
+                <span>Generate</span>
+            </div>
+        </div>
+    </motion.div>
+);
+
+// Visual Card Component
+interface VisualCardProps {
+    visual: VisualOutput;
+    index: number;
+    isDarkMode: boolean;
+    onRetry: (index: number) => void;
+}
+
+const VisualCard: React.FC<VisualCardProps> = ({ visual, index, isDarkMode, onRetry }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [isZoomed, setIsZoomed] = useState(false);
+
+    const getStatusColor = () => {
+        switch (visual.status) {
+            case 'completed': return '#22c55e';
+            case 'failed': return '#ef4444';
+            case 'processing': return '#8b5cf6';
+            default: return '#6b7280';
+        }
+    };
+
+    const getStatusIcon = () => {
+        switch (visual.status) {
+            case 'completed': return <CheckCircle2 size={16} />;
+            case 'failed': return <AlertCircle size={16} />;
+            case 'processing': return <Loader2 size={16} className={styles.spin} />;
+            default: return <ImageIcon size={16} />;
+        }
+    };
+
+    return (
+        <>
+            <motion.div
+                className={`${styles.visualCard} ${styles[visual.status]}`}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
+                {/* Status Badge */}
+                <div className={styles.statusBadge} style={{ background: getStatusColor() }}>
+                    {getStatusIcon()}
+                    <span>{visual.type.replace(/_/g, ' ')}</span>
+                </div>
+
+                {/* Image or Loading State */}
+                <div className={styles.visualContent}>
+                    {visual.status === 'completed' && visual.image_url ? (
+                        <>
+                            <img
+                                src={visual.image_url}
+                                alt={visual.type}
+                                className={styles.visualImage}
+                            />
+                            {isHovered && (
+                                <div className={styles.visualOverlay}>
+                                    <button
+                                        className={styles.zoomBtn}
+                                        onClick={() => setIsZoomed(true)}
+                                    >
+                                        <ZoomIn size={20} />
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    ) : visual.status === 'processing' ? (
+                        <div className={styles.loadingState}>
+                            <Loader2 size={32} className={styles.spin} />
+                            <span>Generating...</span>
+                        </div>
+                    ) : visual.status === 'failed' ? (
+                        <div className={styles.errorState}>
+                            <AlertCircle size={32} />
+                            <span>{visual.error || 'Generation failed'}</span>
+                            <button
+                                className={styles.retryBtn}
+                                onClick={() => onRetry(index)}
+                            >
+                                <RefreshCw size={14} />
+                                Retry
+                            </button>
+                        </div>
+                    ) : (
+                        <div className={styles.pendingState}>
+                            <ImageIcon size={32} />
+                            <span>Waiting...</span>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+
+            {/* Zoom Modal */}
+            <AnimatePresence>
+                {isZoomed && visual.image_url && (
+                    <motion.div
+                        className={styles.zoomModal}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsZoomed(false)}
+                    >
+                        <motion.img
+                            src={visual.image_url}
+                            alt={visual.type}
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.8 }}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
+    );
 };
 
-// Mock Product Analysis
-const mockProductAnalysis: ProductAnalysis = {
-    type: "Zip Tracksuit Set",
-    color: "Forest Green",
-    color_hex: "#2D5016",
-    texture: "Plush velour with soft light-absorbing nap and matte finish",
-    material: "Velour",
-    details: "White piping, gold zipper",
-    logo_front: "Romimi script embroidery (Chest)",
-    logo_back: "RR monogram circle (Center)",
-};
+// Progress Bar Component
+interface ProgressBarProps {
+    progress: number;
+    isDarkMode: boolean;
+}
+
+const ProgressBar: React.FC<ProgressBarProps> = ({ progress, isDarkMode }) => (
+    <div className={styles.progressContainer}>
+        <div className={styles.progressBar}>
+            <motion.div
+                className={styles.progressFill}
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.3 }}
+            />
+        </div>
+        <span className={styles.progressText}>{Math.round(progress)}%</span>
+    </div>
+);
 
 const HomeMiddle: React.FC<HomeMiddleProps> = ({
     isDarkMode = true,
     selectedCollection,
     selectedBrand,
+    frontImage,
+    backImage,
+    productJSON,
+    daJSON,
+    mergedPrompts = {},
+    selectedShots = [],
+    ageMode = 'adult',
+    isAnalyzing = false,
+    onProductAnalyzed,
+    onGenerationIdCreated,
 }) => {
-    // Wizard State
-    const [currentStep, setCurrentStep] = useState(1);
-
-    // Step 1: Images
-    const [frontImage, setFrontImage] = useState<File | null>(null);
-    const [backImage, setBackImage] = useState<File | null>(null);
-    const [referenceImages, setReferenceImages] = useState<File[]>([]);
-
-    // Step 2: Analysis
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [productAnalysis, setProductAnalysis] = useState<ProductAnalysis>(mockProductAnalysis);
-    const [productId, setProductId] = useState<string | null>(null);
+    // Visuals State
+    const [visuals, setVisuals] = useState<VisualOutput[]>([]);
+    const [progress, setProgress] = useState(0);
+    const [isGenerating, setIsGenerating] = useState(false);
     const [generationId, setGenerationId] = useState<string | null>(null);
+    const [productId, setProductId] = useState<string | null>(null);
 
-    // DA Analysis: fetched from collection, falls back to mock
-    const [collectionDA, setCollectionDA] = useState<typeof mockDAAnalysis>(mockDAAnalysis);
+    // DA Analysis from collection
+    const [collectionDA, setCollectionDA] = useState<DAJSON | null>(null);
 
-    // Fetch real DA analysis when collection changes
+    // Fetch DA when collection changes
     useEffect(() => {
         if (!selectedCollection?.id) {
-            setCollectionDA(mockDAAnalysis);
+            setCollectionDA(null);
             return;
         }
 
@@ -123,547 +306,147 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             try {
                 const collection = await getCollection(selectedCollection.id);
                 if (collection.analyzed_da_json) {
-                    // Merge fetched DA with mock defaults for any missing fields
-                    setCollectionDA({
-                        ...mockDAAnalysis,
-                        ...collection.analyzed_da_json,
-                        background: {
-                            ...mockDAAnalysis.background,
-                            ...(collection.analyzed_da_json.background || {}),
-                        },
-                        lighting: {
-                            ...mockDAAnalysis.lighting,
-                            ...(collection.analyzed_da_json.lighting || {}),
-                        },
-                        props: {
-                            ...mockDAAnalysis.props,
-                            ...(collection.analyzed_da_json.props || {}),
-                        },
-                        composition: {
-                            ...mockDAAnalysis.composition,
-                            ...(collection.analyzed_da_json.composition || {}),
-                        },
-                        camera: {
-                            ...mockDAAnalysis.camera,
-                            ...(collection.analyzed_da_json.camera || {}),
-                        },
-                    });
+                    setCollectionDA(collection.analyzed_da_json as unknown as DAJSON);
                 } else {
-                    setCollectionDA(mockDAAnalysis);
+                    setCollectionDA(null);
                 }
             } catch (error) {
-                console.warn('Failed to fetch collection DA, using defaults:', error);
-                setCollectionDA(mockDAAnalysis);
+                console.warn('Failed to fetch collection DA:', error);
+                setCollectionDA(null);
             }
         })();
     }, [selectedCollection?.id]);
 
-    // Step 3: Merged Prompts
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [isMerging, setIsMerging] = useState(false); // NEW: for merge loading screen
-    const [mergedPrompts, setMergedPrompts] = useState<MergedPrompts>({
-        main_visual: '',
-        lifestyle: '',
-        detail_shots: '',
-        model_poses: '',
-    });
-
-    // Step 4: Results
-    const [visuals, setVisuals] = useState<VisualOutput[]>([]);
-    const [progress, setProgress] = useState(0);
-
-    // Step Definitions
-    const steps = [
-        { number: 1, label: 'Upload', icon: <Package size={16} /> },
-        { number: 2, label: 'Analysis', icon: <Sparkles size={16} /> },
-        { number: 3, label: 'Preview', icon: <Wand2 size={16} /> },
-        { number: 4, label: 'Results', icon: <Check size={16} /> },
-    ];
-
-    // Handlers
-    const handleAnalyze = useCallback(async () => {
-        if (!frontImage || !backImage) {
-            alert('Please upload both front and back images.');
-            return;
-        }
-
-        if (!selectedCollection) {
-            alert('Please select a collection first.');
-            return;
-        }
-
-        setIsAnalyzing(true);
-        try {
-            // 1. Create Product
-            const productName = `Product ${new Date().toLocaleString()}`;
-            const product = await createProduct(
-                productName,
-                selectedCollection.id,
-                frontImage,
-                backImage,
-                referenceImages
-            );
-
-            // 2. Analyze Product
-            const analysisResponse = await analyzeProduct(product.id);
-            const json = analysisResponse.analyzed_product_json;
-
-            // Helper to safely extract logo description from various formats
-            const getLogoDesc = (field: any): string => {
-                // Handle null/undefined
-                if (!field) return 'None';
-
-                // Handle plain string
-                if (typeof field === 'string') return field;
-
-                // Handle object with logo details { type, color, position, size }
-                if (typeof field === 'object' && field !== null) {
-                    const parts: string[] = [];
-
-                    if (field.type) parts.push(field.type);
-                    if (field.color && field.color.toLowerCase() !== 'unknown') {
-                        parts.push(`(${field.color})`);
-                    }
-                    if (field.position) parts.push(`at ${field.position}`);
-
-                    // If we built a description, return it
-                    if (parts.length > 0) return parts.join(' ');
-
-                    // Fallback to description/desc fields
-                    if (field.description) return field.description;
-                    if (field.desc) return field.desc;
-
-                    // Last resort: clean stringify
-                    try {
-                        return JSON.stringify(field, null, 0)
-                            .replace(/[{}\"]/g, '')
-                            .replace(/,/g, ', ');
-                    } catch {
-                        return 'Invalid logo data';
-                    }
-                }
-
-                return String(field);
-            };
-
-            // 3. Map result to state (matching backend JSON structure)
-            const mappedAnalysis: ProductAnalysis = {
-                type: json.product_type || json.productType || 'Product type not detected',
-                color: json.color_name || json.colorName || 'Color not detected',
-                color_hex: json.color_hex || json.colorHex || '#000000',
-                texture: json.texture_description || json.textureDescription || 'Texture not detected',
-                material: json.material || 'Material not detected',
-                details: (() => {
-                    const detailsParts: string[] = [];
-                    // Combine details object fields
-                    if (json.details && typeof json.details === 'object') {
-                        Object.entries(json.details).forEach(([_, value]) => {
-                            if (value && value !== 'Unknown' && value !== 'N/A') {
-                                detailsParts.push(`${value}`);
-                            }
-                        });
-                    }
-                    // Add additional details array
-                    if (json.additional_details && Array.isArray(json.additional_details)) {
-                        detailsParts.push(...json.additional_details);
-                    }
-                    return detailsParts.join(', ') || 'No details detected';
-                })(),
-                logo_front: getLogoDesc(json.logo_front),
-                logo_back: getLogoDesc(json.logo_back),
-            };
-
-            setProductAnalysis(mappedAnalysis);
-            setProductId(product.id);
-            setCurrentStep(2);
-        } catch (error: any) {
-            console.error('Analysis failed:', error);
-
-            // Check if this is a quota error (429)
-            const errorMessage = error?.message || error?.errors?.join(', ') || 'Unknown error';
-            const isQuotaError = error?.statusCode === 429 ||
-                errorMessage.toLowerCase().includes('quota') ||
-                errorMessage.toLowerCase().includes('429') ||
-                errorMessage.toLowerCase().includes('exceeded');
-
-            if (isQuotaError) {
-                // Show user-friendly quota error message
-                const quotaMessage =
-                    '⚠️ AI Analysis Quota Exceeded\n\n' +
-                    'The Claude API quota has been reached. Please try one of these options:\n\n' +
-                    '• Wait a few hours for the quota to reset\n' +
-                    '• Check your Claude API plan at https://console.anthropic.com\n\n';
-
-                // In development, offer to use mock data
-                if (process.env.NODE_ENV === 'development') {
-                    const useMockData = confirm(
-                        quotaMessage +
-                        '🔧 Development Mode: Would you like to use mock analysis data to continue testing?'
-                    );
-
-                    if (useMockData) {
-                        // Use mock analysis data
-                        setProductAnalysis(mockProductAnalysis);
-                        setProductId('mock-product-' + Date.now());
-                        setCurrentStep(2);
-                        console.warn('⚠️ Using mock analysis data due to API quota limit');
-                        return;
-                    }
-                } else {
-                    alert(quotaMessage);
-                }
-            } else {
-                // Show generic error message for other errors
-                alert(`Failed to analyze product: ${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
-            }
-        } finally {
-            setIsAnalyzing(false);
-        }
-    }, [frontImage, backImage, referenceImages, selectedCollection]);
-
-    const handleAnalysisChange = useCallback((field: keyof ProductAnalysis, value: string) => {
-        setProductAnalysis(prev => ({ ...prev, [field]: value }));
-    }, []);
-
-    const handleGoToMerge = useCallback(async () => {
-        console.log('🎬 [STEP 3] handleGoToMerge called');
-
-        if (!productId || !selectedCollection) {
-            console.error('❌ Missing product or collection', { productId, selectedCollection });
-            alert('Missing product or collection information.');
-            return;
-        }
-
-        console.log('📊 Product Data:', productAnalysis);
-        console.log('🎨 Collection DA:', collectionDA);
-
-        // Calculate prompts locally using REAL collection DA (instant, no API needed)
-        const product = productAnalysis;
-        const da = collectionDA;
-
-        const basePrompt = `A ${product.type} in ${product.color} (${product.color_hex}) ${product.material}. Texture: ${product.texture}. ${product.details}. Shot in ${da.background.description} with ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.mood} aesthetic.`;
-
-        const initialPrompts: MergedPrompts = {
-            duo: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
-            solo: `Male Model solo shot. ${basePrompt} Professional pose.`,
-            flatlay_front: `Flatlay front view. ${basePrompt} Clean arrangement.`,
-            flatlay_back: `Flatlay angled back view. ${basePrompt} Detail focus.`,
-            closeup_front: `Close-up detail front. Focus on ${product.material} texture and ${product.logo_front}. ${da.background.description}.`,
-            closeup_back: `Close-up detail back. Focus on features and ${product.logo_back}. ${da.background.description}.`,
-        };
-
-        console.log('📝 Generated Prompts:', initialPrompts);
-
-        // Navigate immediately with local prompts (user can edit)
-        setMergedPrompts(initialPrompts);
-        setCurrentStep(3);
-
-        // Create generation ID in background for later use
-        try {
-            console.log('🔄 Creating generation ID for later...');
-            const generation = await createGeneration({
-                product_id: productId,
-                collection_id: selectedCollection.id,
-                generation_type: 'product_visuals',
-            });
-            console.log('✅ Generation ID created:', generation.id);
-            setGenerationId(generation.id);
-        } catch (error) {
-            console.error('❌ Failed to create generation ID:', error);
-            alert('Failed to prepare for generation. Please try again.');
-            setCurrentStep(2);
-        }
-    }, [productAnalysis, productId, selectedCollection, collectionDA]);
-
-    const handlePromptsChange = useCallback(async (key: keyof MergedPrompts, value: string) => {
-        // Update local state immediately
-        setMergedPrompts(prev => {
-            const updated = { ...prev, [key]: value };
-
-            // Save to backend if we have a generationId
-            if (generationId) {
-                updatePromptsAPI(generationId, { prompts: updated }).catch(error => {
-                    console.error('Failed to update prompts on backend:', error);
-                });
-            }
-
-            return updated;
-        });
-    }, [generationId]);
-
-    const handleGenerate = useCallback(async (visualTypes: string[]) => {
-        console.log('🚀 [GENERATE BUTTON] User clicked Generate');
-        console.log('📋 Visual Types:', visualTypes);
-        console.log('🆔 Generation ID:', generationId);
-        console.log('📝 Current Prompts (may be edited):', mergedPrompts);
-
-        if (!generationId) {
-            console.error('❌ No generation ID found!');
-            alert('Generation ID not found. Please try again.');
-            return;
-        }
-
-        if (!selectedCollection) {
-            console.error('❌ No collection selected!');
-            alert('Please select a collection first.');
-            return;
-        }
-
-        // STEP 1: Show merging UI (stay on Step 3 with loading overlay)
-        setIsMerging(true);
-        console.log('🔀 [MERGING] Starting merge process...');
-
-        try {
-            // Call mergePrompts API (creates visuals in DB)
-            console.log('🔀 Calling mergePrompts API...');
-            try {
-                await mergePrompts(generationId);
-                console.log('✅ mergePrompts completed successfully');
-            } catch (error: any) {
-                console.error('❌ mergePrompts failed:', error);
-                const errorMsg = error?.message || '';
-                const responseMsg = error?.response?.message || '';
-
-                if (errorMsg.includes('Collection DA') || responseMsg.includes('Collection DA')) {
-                    console.warn('⚠️ Collection DA missing, injecting current DA data...');
-                    await updateDAJSON(selectedCollection.id, {
-                        analyzed_da_json: collectionDA
-                    });
-                    console.log('✅ DA JSON updated, retrying mergePrompts...');
-                    await mergePrompts(generationId);
-                    console.log('✅ mergePrompts retry successful');
-                } else {
-                    throw error;
-                }
-            }
-
-            // Update prompts with user's edited version
-            console.log('📤 Updating prompts with user edits...');
-            await updatePromptsAPI(generationId, { prompts: mergedPrompts });
-            console.log('✅ Prompts updated with user edits');
-
-            // STEP 2: Merge complete! Now transition to Step 4
-            setIsMerging(false);
-            setIsGenerating(true);
-            setCurrentStep(4);
-            console.log('✅ [MERGING] Merge complete! Moving to Step 4...');
-
-            // STEP 3: Start actual image generation
-            console.log('⚡ [GENERATION] Calling startGeneration API...');
-            await startGeneration(generationId, {
-                visualTypes: visualTypes,
-            });
-            console.log('✅ startGeneration API call successful');
-
-            // STEP 4: Poll for progress updates
-            console.log('🔄 Starting to poll generation status...');
-            const pollInterval = setInterval(async () => {
-                try {
-                    const status = await pollGenerationStatus(generationId);
-                    console.log('📊 Poll status:', {
-                        progress: status.progress,
-                        visualsCount: status.visuals?.length,
-                        isComplete: status.isComplete
-                    });
-
-                    // Update visuals with backend data
-                    setVisuals(status.visuals);
-                    setProgress(status.progress);
-
-                    // Stop polling when complete
-                    if (status.isComplete) {
-                        console.log('✅ Generation complete!');
-                        clearInterval(pollInterval);
-                        setIsGenerating(false);
-                    }
-                } catch (error) {
-                    console.error('❌ Error polling generation status:', error);
-                    clearInterval(pollInterval);
-                    setIsGenerating(false);
-                }
-            }, 2000); // Poll every 2 seconds
-
-            // Safety timeout: stop polling after 10 minutes
-            setTimeout(() => {
-                console.warn('⏱️ Poll timeout reached (10 minutes)');
-                clearInterval(pollInterval);
-                setIsGenerating(false);
-            }, 600000);
-
-        } catch (error) {
-            console.error('❌ Failed during merge or generation:', error);
-            alert('Failed to generate visuals. Please try again.');
-            setIsMerging(false);
-            setIsGenerating(false);
-        }
-    }, [generationId, mergedPrompts, selectedCollection, collectionDA]);
+    // Use passed DA or fetched DA
+    const activeDA = daJSON || collectionDA;
 
     const handleRetry = useCallback(async (index: number) => {
-        if (!generationId) {
-            alert('Generation ID not found.');
-            return;
-        }
+        if (!generationId) return;
 
         try {
-            // Update UI to show processing
             setVisuals(prev => prev.map((v, i) =>
                 i === index ? { ...v, status: 'processing' } : v
             ));
 
-            // Call retry API
             await retryFailedVisual(generationId, index);
 
-            // Poll for status update after retry
             const pollRetry = setInterval(async () => {
                 try {
                     const status = await pollGenerationStatus(generationId);
                     setVisuals(status.visuals);
 
-                    // Check if this specific visual is done
-                    if (status.visuals[index]?.status === 'completed' || status.visuals[index]?.status === 'failed') {
+                    if (status.visuals[index]?.status === 'completed' ||
+                        status.visuals[index]?.status === 'failed') {
                         clearInterval(pollRetry);
                     }
                 } catch (error) {
-                    console.error('Error polling retry status:', error);
                     clearInterval(pollRetry);
                 }
             }, 2000);
 
-            // Safety timeout
             setTimeout(() => clearInterval(pollRetry), 60000);
-
         } catch (error) {
-            console.error('Failed to retry visual:', error);
-            alert('Failed to retry. Please try again.');
+            console.error('Retry failed:', error);
             setVisuals(prev => prev.map((v, i) =>
                 i === index ? { ...v, status: 'failed' } : v
             ));
         }
     }, [generationId]);
 
-    const handleDownload = useCallback(async () => {
-        if (!generationId) {
-            alert('Generation ID not found.');
-            return;
-        }
+    const handleDownloadAll = useCallback(async () => {
+        if (!generationId) return;
 
         try {
-            await triggerDownload(generationId, `product-visuals-${productId}.zip`);
+            await triggerDownload(generationId, `visuals-${Date.now()}.zip`);
         } catch (error) {
-            console.error('Failed to download:', error);
-            alert('Failed to download visuals. Please try again.');
+            console.error('Download failed:', error);
         }
-    }, [generationId, productId]);
+    }, [generationId]);
 
-    const handleStartNew = useCallback(() => {
-        setCurrentStep(1);
-        setFrontImage(null);
-        setBackImage(null);
-        setReferenceImages([]);
-        setProductAnalysis(mockProductAnalysis);
-        setProductId(null);
-        setGenerationId(null);
-        setMergedPrompts({ main_visual: '', lifestyle: '', detail_shots: '', model_poses: '' });
-        setVisuals([]);
-        setProgress(0);
-    }, []);
+    const isComplete = visuals.length > 0 &&
+        visuals.every(v => v.status === 'completed' || v.status === 'failed');
 
-    const frontPreview = useMemo(() =>
-        frontImage ? URL.createObjectURL(frontImage) : undefined,
-        [frontImage]);
-
-    const isComplete = visuals.length > 0 && visuals.every(v => v.status === 'completed' || v.status === 'failed');
+    const completedCount = visuals.filter(v => v.status === 'completed').length;
 
     return (
-        <div className={`${styles.wizardContainer} ${isDarkMode ? styles.dark : styles.light}`}>
-            {/* Header */}
-            <div className={styles.wizardHeader}>
-                <h1 className={styles.wizardTitle}>Create Product Visuals</h1>
-                <p className={styles.wizardSubtitle}>
-                    {selectedCollection && selectedBrand
-                        ? (
-                            <>
-                                <span style={{ opacity: 0.6 }}>{selectedBrand.name}</span>
-                                <span style={{ margin: '0 8px', opacity: 0.4 }}>/</span>
-                                <span>{selectedCollection.name}</span>
-                            </>
-                        )
-                        : (selectedCollection
-                            ? `Generating for: ${selectedCollection.name}`
-                            : 'Upload product photos and generate AI visuals'
-                        )
-                    }
-                </p>
+        <div className={`${styles.container} ${isDarkMode ? styles.dark : styles.light}`}>
+            {/* Header with Progress */}
+            {isGenerating && (
+                <motion.div
+                    className={styles.header}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <div className={styles.headerTitle}>
+                        <Sparkles size={20} />
+                        <span>Generating Visuals</span>
+                    </div>
+                    <ProgressBar progress={progress} isDarkMode={isDarkMode} />
+                </motion.div>
+            )}
+
+            {/* Complete Header */}
+            {isComplete && visuals.length > 0 && (
+                <motion.div
+                    className={styles.header}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <div className={styles.headerTitle}>
+                        <CheckCircle2 size={20} color="#22c55e" />
+                        <span>Generation Complete</span>
+                        <span className={styles.count}>
+                            {completedCount}/{visuals.length} completed
+                        </span>
+                    </div>
+                    <button
+                        className={styles.downloadBtn}
+                        onClick={handleDownloadAll}
+                    >
+                        <Download size={18} />
+                        Download All
+                    </button>
+                </motion.div>
+            )}
+
+            {/* Main Content */}
+            <div className={styles.content}>
+                {visuals.length === 0 ? (
+                    <EmptyState isDarkMode={isDarkMode} />
+                ) : (
+                    <div className={styles.visualsGrid}>
+                        <AnimatePresence>
+                            {visuals.map((visual, index) => (
+                                <VisualCard
+                                    key={`${visual.type}-${index}`}
+                                    visual={visual}
+                                    index={index}
+                                    isDarkMode={isDarkMode}
+                                    onRetry={handleRetry}
+                                />
+                            ))}
+                        </AnimatePresence>
+                    </div>
+                )}
             </div>
 
-            {/* Step Indicator */}
-            <div className={styles.stepIndicator}>
-                {steps.map((step, index) => (
-                    <React.Fragment key={step.number}>
-                        <div
-                            className={`${styles.stepDot} ${currentStep === step.number ? styles.active : ''} ${currentStep > step.number ? styles.completed : ''}`}
-                        >
-                            {currentStep > step.number ? <Check size={16} /> : step.number}
+            {/* Analyzing Overlay */}
+            <AnimatePresence>
+                {isAnalyzing && (
+                    <motion.div
+                        className={styles.analyzingOverlay}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <div className={styles.analyzingContent}>
+                            <Loader2 size={48} className={styles.spin} />
+                            <h3>Analyzing Product...</h3>
+                            <p>This may take a moment</p>
                         </div>
-                        {index < steps.length - 1 && (
-                            <div className={`${styles.stepLine} ${currentStep > step.number ? styles.active : ''}`} />
-                        )}
-                    </React.Fragment>
-                ))}
-            </div>
-
-            {/* Step Content */}
-            <div className={styles.stepContent}>
-                <AnimatePresence mode="wait">
-                    {currentStep === 1 && (
-                        <ProductStep1_Upload
-                            key="step1"
-                            frontImage={frontImage}
-                            backImage={backImage}
-                            referenceImages={referenceImages}
-                            onFrontImageChange={setFrontImage}
-                            onBackImageChange={setBackImage}
-                            onReferenceImagesChange={setReferenceImages}
-                            onNext={handleAnalyze}
-                            isAnalyzing={isAnalyzing}
-                        />
-                    )}
-                    {currentStep === 2 && (
-                        <ProductStep2_Analysis
-                            key="step2"
-                            analysis={productAnalysis}
-                            onAnalysisChange={handleAnalysisChange}
-                            onBack={() => setCurrentStep(1)}
-                            onNext={handleGoToMerge}
-                            frontImagePreview={frontPreview}
-                        />
-                    )}
-                    {currentStep === 3 && (
-                        <ProductStep3_MergePreview
-                            key="step3"
-                            productAnalysis={productAnalysis}
-                            daAnalysis={collectionDA}
-                            mergedPrompts={mergedPrompts}
-                            onPromptsChange={handlePromptsChange}
-                            onBack={() => setCurrentStep(2)}
-                            onGenerate={handleGenerate}
-                            isGenerating={isGenerating}
-                            isMerging={isMerging}
-                        />
-                    )}
-                    {currentStep === 4 && (
-                        <ProductStep4_Results
-                            key="step4"
-                            visuals={visuals}
-                            progress={progress}
-                            isComplete={isComplete}
-                            onRetry={handleRetry}
-                            onDownload={handleDownload}
-                            onStartNew={handleStartNew}
-                        />
-                    )}
-                </AnimatePresence>
-            </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

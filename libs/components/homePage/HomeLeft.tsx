@@ -11,6 +11,8 @@ import { Collection, UpdateCollectionData } from '@/libs/types/homepage/collecti
 import CreateCollectionWizard from '@/libs/components/modals/CreateCollectionWizard';
 import EditCollectionModal from '@/libs/components/modals/EditCollectionModal';
 import CreateBrandModal from '@/libs/components/modals/CreateBrandModal';
+import ProductUploadSection from './ProductUploadSection';
+import JSONPreviewPanel, { ProductJSON, DAJSON } from './JSONPreviewPanel';
 
 interface HomeLeftProps {
   isDarkMode?: boolean;
@@ -20,6 +22,19 @@ interface HomeLeftProps {
   onBrandSelect?: (brand: Brand | null) => void;
   onCollectionSelect?: (collection: Collection | null, brand: Brand | null) => void;
   onBrandCreated?: () => void;
+  // NEW: Product Upload props
+  frontImage?: File | null;
+  backImage?: File | null;
+  onFrontImageChange?: (file: File | null) => void;
+  onBackImageChange?: (file: File | null) => void;
+  onAnalyze?: () => void;
+  isAnalyzing?: boolean;
+  isAnalyzed?: boolean;
+  // NEW: JSON Panel props
+  productJSON?: ProductJSON | null;
+  daJSON?: DAJSON | null;
+  mergedPrompts?: Record<string, string>;
+  onPromptsChange?: (key: string, value: string) => void;
 }
 
 const HomeLeft: React.FC<HomeLeftProps> = ({
@@ -29,7 +44,20 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   refreshTrigger = 0,
   onBrandSelect,
   onCollectionSelect,
-  onBrandCreated
+  onBrandCreated,
+  // NEW: Product Upload props
+  frontImage = null,
+  backImage = null,
+  onFrontImageChange,
+  onBackImageChange,
+  onAnalyze,
+  isAnalyzing = false,
+  isAnalyzed = false,
+  // NEW: JSON Panel props
+  productJSON = null,
+  daJSON = null,
+  mergedPrompts = {},
+  onPromptsChange,
 }) => {
   const router = useRouter();
   const [activeMenu, setActiveMenu] = useState('product-visuals');
@@ -316,6 +344,30 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
             </button>
           </div>
 
+          {/* Product Upload Section */}
+          {onFrontImageChange && onBackImageChange && onAnalyze && (
+            <ProductUploadSection
+              isDarkMode={isDarkMode}
+              frontImage={frontImage || null}
+              backImage={backImage || null}
+              onFrontImageChange={onFrontImageChange}
+              onBackImageChange={onBackImageChange}
+              onAnalyze={onAnalyze}
+              isAnalyzing={isAnalyzing}
+              isAnalyzed={isAnalyzed}
+            />
+          )}
+
+          {/* JSON Preview Panel */}
+          <JSONPreviewPanel
+            isDarkMode={isDarkMode}
+            productJSON={productJSON || null}
+            daJSON={daJSON || null}
+            mergedPrompts={mergedPrompts}
+            onPromptsChange={onPromptsChange}
+            isAnalyzing={isAnalyzing}
+          />
+
           {/* LIBRARY Section */}
           <div className={styles.section}>
             <div className={styles.sectionTitle}>Library</div>
@@ -530,18 +582,20 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
             </button>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Create Collection Wizard */}
-      {selectedBrandForCollection && (
-        <CreateCollectionWizard
-          isOpen={isCollectionWizardOpen}
-          onClose={() => setIsCollectionWizardOpen(false)}
-          brandId={selectedBrandForCollection.id}
-          brandName={selectedBrandForCollection.name}
-          onCollectionCreated={handleCollectionCreated}
-        />
-      )}
+      {
+        selectedBrandForCollection && (
+          <CreateCollectionWizard
+            isOpen={isCollectionWizardOpen}
+            onClose={() => setIsCollectionWizardOpen(false)}
+            brandId={selectedBrandForCollection.id}
+            brandName={selectedBrandForCollection.name}
+            onCollectionCreated={handleCollectionCreated}
+          />
+        )
+      }
 
       {/* Create Brand Modal */}
       <CreateBrandModal
@@ -551,92 +605,100 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
       />
 
       {/* Edit Brand Modal */}
-      {isEditModalOpen && editingBrand && (
-        <div className={styles.modalOverlay} onClick={() => setIsEditModalOpen(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3>Edit Brand</h3>
-            <input
-              type="text"
-              value={editBrandName}
-              onChange={(e) => setEditBrandName(e.target.value)}
-              className={styles.modalInput}
-              placeholder="Brand name"
-              autoFocus
-            />
-            <div className={styles.modalActions}>
-              <button className={styles.cancelBtn} onClick={() => setIsEditModalOpen(false)}>
-                Cancel
-              </button>
-              <button className={styles.saveBtn} onClick={handleEditBrandSave}>
-                Save
-              </button>
+      {
+        isEditModalOpen && editingBrand && (
+          <div className={styles.modalOverlay} onClick={() => setIsEditModalOpen(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <h3>Edit Brand</h3>
+              <input
+                type="text"
+                value={editBrandName}
+                onChange={(e) => setEditBrandName(e.target.value)}
+                className={styles.modalInput}
+                placeholder="Brand name"
+                autoFocus
+              />
+              <div className={styles.modalActions}>
+                <button className={styles.cancelBtn} onClick={() => setIsEditModalOpen(false)}>
+                  Cancel
+                </button>
+                <button className={styles.saveBtn} onClick={handleEditBrandSave}>
+                  Save
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Delete Brand Confirmation Modal */}
-      {deleteConfirmBrand && (
-        <div className={styles.modalOverlay} onClick={() => setDeleteConfirmBrand(null)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3>Delete Brand</h3>
-            <p className={styles.modalText}>
-              Are you sure you want to delete <strong>{deleteConfirmBrand.name}</strong>?
-              This will also delete all collections in this brand.
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.cancelBtn} onClick={() => setDeleteConfirmBrand(null)}>
-                Cancel
-              </button>
-              <button
-                className={styles.deleteBtn}
-                onClick={handleDeleteBrandConfirm}
-                disabled={isDeleting}
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </button>
+      {
+        deleteConfirmBrand && (
+          <div className={styles.modalOverlay} onClick={() => setDeleteConfirmBrand(null)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <h3>Delete Brand</h3>
+              <p className={styles.modalText}>
+                Are you sure you want to delete <strong>{deleteConfirmBrand.name}</strong>?
+                This will also delete all collections in this brand.
+              </p>
+              <div className={styles.modalActions}>
+                <button className={styles.cancelBtn} onClick={() => setDeleteConfirmBrand(null)}>
+                  Cancel
+                </button>
+                <button
+                  className={styles.deleteBtn}
+                  onClick={handleDeleteBrandConfirm}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Edit Collection Modal */}
-      {editingCollection && (
-        <EditCollectionModal
-          collection={editingCollection}
-          isOpen={isEditCollectionModalOpen}
-          onClose={() => {
-            setIsEditCollectionModalOpen(false);
-            setEditingCollection(null);
-          }}
-          onSave={handleEditCollectionSave}
-          isDarkMode={isDarkMode}
-        />
-      )}
+      {
+        editingCollection && (
+          <EditCollectionModal
+            collection={editingCollection}
+            isOpen={isEditCollectionModalOpen}
+            onClose={() => {
+              setIsEditCollectionModalOpen(false);
+              setEditingCollection(null);
+            }}
+            onSave={handleEditCollectionSave}
+            isDarkMode={isDarkMode}
+          />
+        )
+      }
 
       {/* Delete Collection Confirmation Modal */}
-      {deleteConfirmCollection && (
-        <div className={styles.modalOverlay} onClick={() => setDeleteConfirmCollection(null)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h3>Delete Collection</h3>
-            <p className={styles.modalText}>
-              Are you sure you want to delete <strong>{deleteConfirmCollection.collection.name}</strong>?
-            </p>
-            <div className={styles.modalActions}>
-              <button className={styles.cancelBtn} onClick={() => setDeleteConfirmCollection(null)}>
-                Cancel
-              </button>
-              <button
-                className={styles.deleteBtn}
-                onClick={handleDeleteCollectionConfirm}
-                disabled={isDeletingCollection}
-              >
-                {isDeletingCollection ? 'Deleting...' : 'Delete'}
-              </button>
+      {
+        deleteConfirmCollection && (
+          <div className={styles.modalOverlay} onClick={() => setDeleteConfirmCollection(null)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <h3>Delete Collection</h3>
+              <p className={styles.modalText}>
+                Are you sure you want to delete <strong>{deleteConfirmCollection.collection.name}</strong>?
+              </p>
+              <div className={styles.modalActions}>
+                <button className={styles.cancelBtn} onClick={() => setDeleteConfirmCollection(null)}>
+                  Cancel
+                </button>
+                <button
+                  className={styles.deleteBtn}
+                  onClick={handleDeleteCollectionConfirm}
+                  disabled={isDeletingCollection}
+                >
+                  {isDeletingCollection ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </>
   );
 };

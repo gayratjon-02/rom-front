@@ -1,0 +1,221 @@
+// ProductUploadSection SCSS Module
+
+.container {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid;
+    margin: 0 12px 12px;
+
+    &.dark {
+        background: rgba(20, 20, 35, 0.6);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    &.light {
+        background: rgba(255, 255, 255, 0.8);
+        border-color: rgba(0, 0, 0, 0.08);
+    }
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+
+    .dark & {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .light & {
+        color: rgba(0, 0, 0, 0.8);
+    }
+}
+
+.checkIcon {
+    color: #22c55e;
+    margin-left: auto;
+}
+
+.uploadGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.uploadZoneWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.uploadLabel {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    .dark & {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .light & {
+        color: rgba(0, 0, 0, 0.5);
+    }
+}
+
+.uploadZone {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 2px dashed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+
+    .dark & {
+        border-color: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.03);
+
+        &:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(139, 92, 246, 0.1);
+        }
+    }
+
+    .light & {
+        border-color: rgba(0, 0, 0, 0.12);
+        background: rgba(0, 0, 0, 0.02);
+
+        &:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            background: rgba(99, 102, 241, 0.05);
+        }
+    }
+
+    &.dragOver {
+        .dark & {
+            border-color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.2);
+        }
+
+        .light & {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+    }
+
+    &.hasImage {
+        border-style: solid;
+
+        .dark & {
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+
+        .light & {
+            border-color: rgba(22, 163, 74, 0.5);
+        }
+    }
+}
+
+.uploadPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    
+    span {
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .dark & {
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    .light & {
+        color: rgba(0, 0, 0, 0.4);
+    }
+}
+
+.previewImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.removeBtn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.9);
+    }
+}
+
+.analyzeBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &.ready {
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        color: #fff;
+
+        &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+    }
+
+    &.disabled {
+        cursor: not-allowed;
+
+        .dark & {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .light & {
+            background: rgba(0, 0, 0, 0.05);
+            color: rgba(0, 0, 0, 0.3);
+        }
+    }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

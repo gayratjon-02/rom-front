@@ -1,27 +1,63 @@
 import Head from "next/head";
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
 import { useTheme } from "@mui/material";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import HomeTop from "@/libs/components/homePage/HomeTop";
 import HomeLeft from "@/libs/components/homePage/HomeLeft";
-import HomeMiddle from "@/libs/components/homePage/HomeMiddle";
+import HomeMiddle, { ProductJSON, DAJSON } from "@/libs/components/homePage/HomeMiddle";
 import HomeBottom from "@/libs/components/homePage/HomeButtom";
 import { Brand } from "@/libs/types/homepage/brand";
 import { Collection } from "@/libs/types/homepage/collection";
-import HomeRight from "@/libs/components/homePage/HomeRight";
 // 🔒 XAVFSIZLIK: withAuth HOC import
 import { withAuth } from "@/libs/components/auth/withAuth";
+// API imports
+import { createProduct, analyzeProduct } from '@/libs/server/HomePage/product';
+import { getCollection, updateDAJSON } from '@/libs/server/HomePage/collection';
+import {
+  createGeneration,
+  updateMergedPrompts as updatePromptsAPI,
+  mergePrompts,
+} from '@/libs/server/HomePage/merging';
+import {
+  startGeneration,
+  pollGenerationStatus,
+} from '@/libs/server/HomePage/generate';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Mock DA Analysis for fallback
+const mockDAAnalysis: DAJSON = {
+  background: {
+    color_hex: '#FFFFFF',
+    color_name: 'White',
+    description: 'Clean white cyclorama with soft natural shadows',
+    texture: 'smooth matte',
+  },
+  props: {
+    items: ['Minimalist wooden stool', 'Dried pampas grass'],
+    placement: 'asymmetric sides',
+    style: 'modern minimalist',
+  },
+  mood: 'Serene, sophisticated, effortlessly elegant',
+  lighting: {
+    type: 'softbox',
+    temperature: 'warm golden hour',
+    direction: 'front-left 45°',
+    intensity: 'medium-soft',
+  },
+  composition: {
+    layout: 'centered editorial',
+    poses: 'relaxed natural',
+    framing: 'full body with headroom',
+  },
+  styling: {
+    bottom: 'dark slim trousers',
+    feet: 'white minimalist sneakers',
+  },
+  camera: {
+    focal_length_mm: 85,
+    aperture: 2.8,
+    focus: 'subject eyes',
+  },
+  quality: 'professional editorial',
+};
 
 // 🔒 XAVFSIZLIK: Protected component - login kerak
 function Home() {
@@ -38,38 +74,287 @@ function Home() {
   // Mobile drawer state
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
+  // ==================== NEW SINGLE-PAGE STATE ====================
+  // Product Upload
+  const [frontImage, setFrontImage] = useState<File | null>(null);
+  const [backImage, setBackImage] = useState<File | null>(null);
+
+  // Analysis State
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [productJSON, setProductJSON] = useState<ProductJSON | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
+
+  // DA State
+  const [daJSON, setDAJSON] = useState<DAJSON | null>(null);
+
+  // Merged Prompts
+  const [mergedPrompts, setMergedPrompts] = useState<Record<string, string>>({});
+  const [generationId, setGenerationId] = useState<string | null>(null);
+
+  // Shot Selection
+  const [selectedShots, setSelectedShots] = useState<string[]>([
+    'duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'
+  ]);
+  const [ageMode, setAgeMode] = useState<'adult' | 'kid'>('adult');
+
+  // Generation State
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [visuals, setVisuals] = useState<any[]>([]);
+  const [progress, setProgress] = useState(0);
+
+  // ==================== HANDLERS ====================
+
   const handleBrandCreated = useCallback(() => {
     setBrandRefreshTrigger(prev => prev + 1);
   }, []);
 
   const handleBrandSelect = useCallback((brand: Brand | null) => {
     setSelectedBrand(brand);
-    // Note: Collection reset is handled by HomeLeft via onCollectionSelect(null, brand)
   }, []);
 
   const handleCollectionSelect = useCallback((collection: Collection | null, brand: Brand | null) => {
     setSelectedCollection(collection);
     if (brand) setSelectedBrand(brand);
+
+    // Reset product state when collection changes
+    setProductJSON(null);
+    setProductId(null);
+    setMergedPrompts({});
+    setGenerationId(null);
+    setVisuals([]);
+    setProgress(0);
   }, []);
+
+  // Fetch DA when collection changes
+  useEffect(() => {
+    if (!selectedCollection?.id) {
+      setDAJSON(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const collection = await getCollection(selectedCollection.id);
+        if (collection.analyzed_da_json) {
+          setDAJSON(collection.analyzed_da_json as unknown as DAJSON);
+        } else {
+          setDAJSON(mockDAAnalysis);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch collection DA:', error);
+        setDAJSON(mockDAAnalysis);
+      }
+    })();
+  }, [selectedCollection?.id]);
+
+  // Handle Product Analysis
+  const handleAnalyze = useCallback(async () => {
+    if (!frontImage || !backImage) {
+      alert('Iltimos, old va orqa rasmlarni yuklang.');
+      return;
+    }
+
+    if (!selectedCollection) {
+      alert('Iltimos, avval kolleksiyani tanlang.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      // 1. Create Product
+      const productName = `Product ${new Date().toLocaleString()}`;
+      const product = await createProduct(
+        productName,
+        selectedCollection.id,
+        frontImage,
+        backImage,
+        []
+      );
+
+      // 2. Analyze Product
+      const analysisResponse = await analyzeProduct(product.id);
+      const json = analysisResponse.analyzed_product_json;
+
+      // Helper to safely extract logo description
+      const getLogoDesc = (field: any): string => {
+        if (!field) return 'None';
+        if (typeof field === 'string') return field;
+        if (typeof field === 'object' && field !== null) {
+          const parts: string[] = [];
+          if (field.type) parts.push(field.type);
+          if (field.color && field.color.toLowerCase() !== 'unknown') {
+            parts.push(`(${field.color})`);
+          }
+          if (field.position) parts.push(`at ${field.position}`);
+          if (parts.length > 0) return parts.join(' ');
+          if (field.description) return field.description;
+          return JSON.stringify(field).replace(/[{}\"]/g, '').replace(/,/g, ', ');
+        }
+        return String(field);
+      };
+
+      // 3. Map result to state
+      const mappedAnalysis: ProductJSON = {
+        type: json.product_type || json.productType || 'Product type not detected',
+        color: json.color_name || json.colorName || 'Color not detected',
+        color_hex: json.color_hex || json.colorHex || '#000000',
+        texture: json.texture_description || json.textureDescription || 'Texture not detected',
+        material: json.material || 'Material not detected',
+        details: (() => {
+          const detailsParts: string[] = [];
+          if (json.details && typeof json.details === 'object') {
+            Object.entries(json.details).forEach(([_, value]) => {
+              if (value && value !== 'Unknown' && value !== 'N/A') {
+                detailsParts.push(`${value}`);
+              }
+            });
+          }
+          if (json.additional_details && Array.isArray(json.additional_details)) {
+            detailsParts.push(...json.additional_details);
+          }
+          return detailsParts.join(', ') || 'No details detected';
+        })(),
+        logo_front: getLogoDesc(json.logo_front),
+        logo_back: getLogoDesc(json.logo_back),
+      };
+
+      setProductJSON(mappedAnalysis);
+      setProductId(product.id);
+
+      // 4. Generate prompts locally
+      const da = daJSON || mockDAAnalysis;
+      const basePrompt = `A ${mappedAnalysis.type} in ${mappedAnalysis.color} (${mappedAnalysis.color_hex}) ${mappedAnalysis.material}. Texture: ${mappedAnalysis.texture}. ${mappedAnalysis.details}. Shot in ${da.background.description} with ${da.lighting.type} (${da.lighting.temperature}) lighting. ${da.mood} aesthetic.`;
+
+      const prompts: Record<string, string> = {
+        duo: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
+        solo: `Male Model solo shot. ${basePrompt} Professional pose.`,
+        flatlay_front: `Flatlay front view. ${basePrompt} Clean arrangement.`,
+        flatlay_back: `Flatlay angled back view. ${basePrompt} Detail focus.`,
+        closeup_front: `Close-up detail front. Focus on ${mappedAnalysis.material} texture and ${mappedAnalysis.logo_front}. ${da.background.description}.`,
+        closeup_back: `Close-up detail back. Focus on features and ${mappedAnalysis.logo_back}. ${da.background.description}.`,
+      };
+
+      setMergedPrompts(prompts);
+
+      // 5. Create generation ID
+      const generation = await createGeneration({
+        product_id: product.id,
+        collection_id: selectedCollection.id,
+        generation_type: 'product_visuals',
+      });
+      setGenerationId(generation.id);
+
+    } catch (error: any) {
+      console.error('Analysis failed:', error);
+      const errorMessage = error?.message || 'Unknown error';
+      alert(`Tahlil qilish muvaffaqiyatsiz: ${errorMessage}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [frontImage, backImage, selectedCollection, daJSON]);
+
+  // Handle Generation
+  const handleGenerate = useCallback(async (visualTypes: string[]) => {
+    console.log('🚀 Generate clicked with:', visualTypes);
+
+    if (!generationId) {
+      alert('Generation ID topilmadi. Iltimos, qayta urinib ko\'ring.');
+      return;
+    }
+
+    if (!selectedCollection) {
+      alert('Kolleksiya tanlang.');
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      // 1. Merge prompts (creates visuals in DB)
+      try {
+        await mergePrompts(generationId);
+      } catch (error: any) {
+        if (error?.message?.includes('Collection DA')) {
+          await updateDAJSON(selectedCollection.id, {
+            analyzed_da_json: daJSON || mockDAAnalysis
+          });
+          await mergePrompts(generationId);
+        } else {
+          throw error;
+        }
+      }
+
+      // 2. Update prompts with user's edited version
+      await updatePromptsAPI(generationId, { prompts: mergedPrompts });
+
+      // 3. Start generation
+      await startGeneration(generationId, { visualTypes });
+
+      // 4. Poll for updates
+      const pollInterval = setInterval(async () => {
+        try {
+          const status = await pollGenerationStatus(generationId);
+          setVisuals(status.visuals);
+          setProgress(status.progress);
+
+          if (status.isComplete) {
+            clearInterval(pollInterval);
+            setIsGenerating(false);
+          }
+        } catch (error) {
+          console.error('Poll error:', error);
+          clearInterval(pollInterval);
+          setIsGenerating(false);
+        }
+      }, 2000);
+
+      // Safety timeout
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setIsGenerating(false);
+      }, 600000);
+
+    } catch (error) {
+      console.error('Generation failed:', error);
+      alert('Generatsiya muvaffaqiyatsiz bo\'ldi.');
+      setIsGenerating(false);
+    }
+  }, [generationId, mergedPrompts, selectedCollection, daJSON]);
+
+  // Handle prompts change
+  const handlePromptsChange = useCallback((key: string, value: string) => {
+    setMergedPrompts(prev => {
+      const updated = { ...prev, [key]: value };
+      // Sync to backend if we have generationId
+      if (generationId) {
+        updatePromptsAPI(generationId, { prompts: updated }).catch(console.error);
+      }
+      return updated;
+    });
+  }, [generationId]);
+
+  const isAnalyzed = !!productJSON;
+  const hasDA = !!daJSON;
 
   return (
     <div style={{
       display: 'flex',
+      flexDirection: 'column',
       height: '100vh',
       overflow: 'hidden',
       background: isDarkMode ? '#0a0a0f' : '#f8fafc',
       color: isDarkMode ? '#f8fafc' : '#0f172a',
       position: 'relative'
     }}>
-      {/* Mobile Hamburger Button - Only visible on mobile */}
+      {/* Mobile Hamburger Button */}
       <button
         onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
         style={{
-          display: 'none', // Hidden on desktop
+          display: 'none',
           position: 'fixed',
-          top: '80px', // Lowered to 80px to safely clear the header and tabs
+          top: '80px',
           left: '16px',
-          zIndex: 1100, // Higher than sidebar
+          zIndex: 1100,
           width: '44px',
           height: '44px',
           background: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
@@ -112,87 +397,127 @@ function Home() {
         }} />
       </button>
 
-      {/* Mobile Overlay - Only visible when drawer is open */}
+      {/* Mobile Overlay */}
       {isMobileDrawerOpen && (
         <div
           onClick={() => setIsMobileDrawerOpen(false)}
           style={{
-            display: 'none', // Hidden on desktop
+            display: 'none',
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
             background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 999, // Lower than HomeLeft (1000)
+            zIndex: 999,
             backdropFilter: 'blur(4px)',
           }}
           className="mobile-overlay"
         />
       )}
 
-      {/* Left Sidebar */}
-      <div className="home-left-container">
-        <HomeLeft
-          isDarkMode={isDarkMode}
-          refreshTrigger={brandRefreshTrigger}
-          onBrandSelect={handleBrandSelect}
-          onCollectionSelect={handleCollectionSelect}
-          onBrandCreated={handleBrandCreated}
-          isOpen={isMobileDrawerOpen} // Pass isOpen state to trigger HomeLeft's internal mobile CSS
-        />
-      </div>
-
-      {/* Main Content Area */}
+      {/* Main Layout: Sidebar + Content */}
       <div style={{
-        flex: 1,
         display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        height: '100vh'
-      }}
-        className="main-content-area"
-      >
-        <HomeTop
-          selectedBrand={selectedBrand}
-          selectedCollection={selectedCollection}
-          onCollectionSelect={handleCollectionSelect}
-        />
+        flex: 1,
+        overflow: 'hidden'
+      }}>
+        {/* Left Sidebar */}
+        <div className="home-left-container">
+          <HomeLeft
+            isDarkMode={isDarkMode}
+            refreshTrigger={brandRefreshTrigger}
+            onBrandSelect={handleBrandSelect}
+            onCollectionSelect={handleCollectionSelect}
+            onBrandCreated={handleBrandCreated}
+            isOpen={isMobileDrawerOpen}
+            // NEW: Pass upload props
+            frontImage={frontImage}
+            backImage={backImage}
+            onFrontImageChange={setFrontImage}
+            onBackImageChange={setBackImage}
+            onAnalyze={handleAnalyze}
+            isAnalyzing={isAnalyzing}
+            isAnalyzed={isAnalyzed}
+            // JSON Panel props
+            productJSON={productJSON}
+            daJSON={daJSON}
+            mergedPrompts={mergedPrompts}
+            onPromptsChange={handlePromptsChange}
+          />
+        </div>
 
-        {/* HomeMiddle - to'liq ko'rinishi, scroll yo'q */}
+        {/* Main Content Area */}
         <div style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: isDarkMode ? '#0a0a0f' : '#ffffff'
-        }}>
-          <HomeMiddle
-            isDarkMode={isDarkMode}
-            selectedCollection={selectedCollection}
+          height: '100%'
+        }}
+          className="main-content-area"
+        >
+          {/* Header */}
+          <HomeTop
             selectedBrand={selectedBrand}
+            selectedCollection={selectedCollection}
+            onCollectionSelect={handleCollectionSelect}
+          />
+
+          {/* Main Visuals Area */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            background: isDarkMode ? '#0a0a0f' : '#ffffff'
+          }}>
+            <HomeMiddle
+              isDarkMode={isDarkMode}
+              selectedCollection={selectedCollection}
+              selectedBrand={selectedBrand}
+              frontImage={frontImage}
+              backImage={backImage}
+              productJSON={productJSON}
+              daJSON={daJSON}
+              mergedPrompts={mergedPrompts}
+              selectedShots={selectedShots}
+              ageMode={ageMode}
+              isAnalyzing={isAnalyzing}
+            />
+          </div>
+
+          {/* Bottom Bar */}
+          <HomeBottom
+            isDarkMode={isDarkMode}
+            selectedShots={selectedShots}
+            onShotsChange={setSelectedShots}
+            ageMode={ageMode}
+            onAgeModeChange={setAgeMode}
+            onGenerate={handleGenerate}
+            isGenerating={isGenerating}
+            isAnalyzed={isAnalyzed}
+            hasDA={hasDA}
           />
         </div>
       </div>
 
       {/* Responsive CSS */}
       <style jsx>{`
-        @media (max-width: 768px) {
-          .mobile-hamburger {
-            display: flex !important;
-          }
-          
-          .mobile-overlay {
-            display: block !important;
-          }
-          
-          /* HomeLeft component handles its own fixed position on mobile */
-          /* We just need to ensure the container doesn't block interactions */
-          .home-left-container {
-            display: contents; 
-          }
-        }
-      `}</style>
+                @media (max-width: 768px) {
+                    .mobile-hamburger {
+                        display: flex !important;
+                    }
+                    
+                    .mobile-overlay {
+                        display: block !important;
+                    }
+                    
+                    .home-left-container {
+                        display: contents; 
+                    }
+                }
+            `}</style>
     </div>
   );
 }

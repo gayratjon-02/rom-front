@@ -1,0 +1,379 @@
+// HomeBottom SCSS Module - Bottom Bar for Shot Selection and Generate
+
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-top: 1px solid;
+    min-height: 64px;
+    gap: 24px;
+
+    &.dark {
+        background: rgba(15, 15, 25, 0.95);
+        border-color: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(20px);
+    }
+
+    &.light {
+        background: rgba(255, 255, 255, 0.95);
+        border-color: rgba(0, 0, 0, 0.08);
+        backdrop-filter: blur(20px);
+    }
+}
+
+// Left Section - Shot Types
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.selectAllBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+
+    .dark & {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        &.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.5);
+            color: #a5b4fc;
+        }
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.03);
+        border-color: rgba(0, 0, 0, 0.1);
+        color: rgba(0, 0, 0, 0.6);
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.15);
+        }
+
+        &.active {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.4);
+            color: #4f46e5;
+        }
+    }
+}
+
+.divider {
+    width: 1px;
+    height: 32px;
+
+    .dark & {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.1);
+    }
+}
+
+.shotTypes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.shotBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+    position: relative;
+
+    .dark & {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        &.active {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
+            border-color: rgba(139, 92, 246, 0.5);
+            color: #e0e7ff;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        }
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.03);
+        border-color: rgba(0, 0, 0, 0.1);
+        color: rgba(0, 0, 0, 0.7);
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+
+        &.active {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+            border-color: rgba(99, 102, 241, 0.4);
+            color: #4f46e5;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.1);
+        }
+    }
+}
+
+.ageBadge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+
+    .dark & {
+        background: rgba(99, 102, 241, 0.5);
+        color: #fff;
+    }
+
+    .light & {
+        background: rgba(99, 102, 241, 0.2);
+        color: #4f46e5;
+    }
+}
+
+// Center Section - Age Toggle
+.centerSection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.ageToggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ageLabel {
+    font-size: 13px;
+    font-weight: 500;
+
+    .dark & {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .light & {
+        color: rgba(0, 0, 0, 0.5);
+    }
+}
+
+.ageButtons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+
+    .dark & {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.03);
+    }
+}
+
+.ageBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+
+    .dark & {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.5);
+
+        &:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        &.active {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(6, 182, 212, 0.3));
+            color: #6ee7b7;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+    }
+
+    .light & {
+        background: transparent;
+        color: rgba(0, 0, 0, 0.4);
+
+        &:hover {
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        &.active {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+            color: #059669;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+        }
+    }
+}
+
+// Right Section - Generate Button
+.rightSection {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.generateBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+
+    &.ready {
+        background: linear-gradient(135deg, #8b5cf6, #6366f1, #8b5cf6);
+        background-size: 200% 200%;
+        animation: gradientShift 3s ease infinite;
+        color: #fff;
+        box-shadow: 0 4px 25px rgba(139, 92, 246, 0.4);
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 35px rgba(139, 92, 246, 0.5);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+    }
+
+    &.disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+
+        .dark & {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .light & {
+            background: rgba(0, 0, 0, 0.05);
+            color: rgba(0, 0, 0, 0.3);
+        }
+    }
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+// Responsive
+@media (max-width: 1024px) {
+    .container {
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .leftSection {
+        order: 1;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .centerSection {
+        order: 2;
+        width: 50%;
+    }
+
+    .rightSection {
+        order: 3;
+        width: 50%;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .shotTypes {
+        gap: 6px;
+    }
+
+    .shotBtn {
+        padding: 6px 10px;
+        font-size: 12px;
+
+        span {
+            display: none;
+        }
+    }
+
+    .selectAllBtn span {
+        display: none;
+    }
+
+    .centerSection,
+    .rightSection {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .generateBtn {
+        width: 100%;
+        justify-content: center;
+        padding: 14px;
+    }
+}
