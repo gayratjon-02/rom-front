@@ -522,11 +522,11 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
             {!isLoadingBrands && brands.length === 0 && (
               <button
                 className={styles.createBrandButton}
-                onClick={() => setIsBrandModalOpen(true)}
+                onClick={() => setIsCollectionWizardOpen(true)}
                 style={{ marginTop: '10px', width: '100%', justifyContent: 'center' }}
               >
                 <span className={styles.addIcon}>+</span>
-                <span className={styles.label}>Create Design Aesthetic</span>
+                <span className={styles.label}>Create DA</span>
               </button>
             )}
           </div>
@@ -580,15 +580,20 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
         </div>
       </div >
 
-      {/* Create Collection Wizard */}
+      {/* Create Collection Wizard - Unified Flow */}
       {
-        selectedBrandForCollection && (
+        isCollectionWizardOpen && (
           <CreateCollectionWizard
             isOpen={isCollectionWizardOpen}
-            onClose={() => setIsCollectionWizardOpen(false)}
-            brandId={selectedBrandForCollection.id}
-            brandName={selectedBrandForCollection.name}
+            onClose={() => {
+              setIsCollectionWizardOpen(false);
+              setSelectedBrandForCollection(null);
+            }}
+            brandId={selectedBrandForCollection?.id}
+            brandName={selectedBrandForCollection?.name}
             onCollectionCreated={handleCollectionCreated}
+            onBrandCreated={handleBrandCreated}
+            availableBrands={brands}
           />
         )
       }

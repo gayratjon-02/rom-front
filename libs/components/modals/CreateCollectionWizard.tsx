@@ -15,19 +15,24 @@ import {
 } from 'lucide-react';
 import styles from '@/scss/styles/Modals/CreateCollectionWizard.module.scss';
 import { createCollection, updateDAJSON, analyzeDA } from '@/libs/server/HomePage/collection';
+import { createBrand } from '@/libs/server/HomePage/brand';
 import { Collection } from '@/libs/types/homepage/collection';
+import { Brand } from '@/libs/types/homepage/brand';
 import { AuthApiError } from '@/libs/components/types/config';
 import { validateImageFile } from '@/libs/server/uploader/uploader';
 
 interface CreateCollectionWizardProps {
     isOpen: boolean;
     onClose: () => void;
-    brandId: string;
-    brandName: string;
+    brandId?: string;
+    brandName?: string;
     onCollectionCreated?: (collection: Collection) => void;
+    onBrandCreated?: (brand: Brand) => void;
+    availableBrands?: Brand[];
 }
 
 interface FormData {
+    brandName: string;
     name: string;
     code: string;
     description: string;
@@ -90,9 +95,11 @@ const slideVariants = {
 const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     isOpen,
     onClose,
-    brandId,
-    brandName,
-    onCollectionCreated
+    brandId: initialBrandId,
+    brandName: initialBrandName,
+    onCollectionCreated,
+    onBrandCreated,
+    availableBrands = []
 }) => {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
@@ -101,13 +108,23 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     const [currentStep, setCurrentStep] = useState(1);
     const [direction, setDirection] = useState(0);
     const [createdCollection, setCreatedCollection] = useState<Collection | null>(null);
+    const [activeBrandId, setActiveBrandId] = useState<string | null>(initialBrandId || null);
 
     // Form state
     const [formData, setFormData] = useState<FormData>({
+        brandName: initialBrandName || '',
         name: '',
         code: '',
         description: ''
     });
+
+    // Update form if props change
+    useEffect(() => {
+        if (initialBrandName) {
+            setFormData(prev => ({ ...prev, brandName: initialBrandName }));
+            setActiveBrandId(initialBrandId || null);
+        }
+    }, [initialBrandName, initialBrandId]);
 
     // Image state
     const [uploadedImage, setUploadedImage] = useState<File | null>(null);
@@ -125,6 +142,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
 
 
     // Input refs for keyboard navigation
+    const brandInputRef = useRef<HTMLInputElement>(null);
     const nameInputRef = useRef<HTMLInputElement>(null);
     const codeInputRef = useRef<HTMLInputElement>(null);
     const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -291,11 +309,31 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
         }, 200);
 
         try {
+            let targetBrandId = activeBrandId;
+
+            // If no brand ID (new flow), create or find brand
+            if (!targetBrandId) {
+                const brands = availableBrands || [];
+                const existingBrand = brands.find(b => b.name.toLowerCase() === formData.brandName.trim().toLowerCase());
+
+                if (existingBrand) {
+                    targetBrandId = existingBrand.id;
+                } else {
+                    // Create NEW Brand
+                    const newBrand = await createBrand({ name: formData.brandName.trim() });
+                    targetBrandId = newBrand.id;
+                    if (onBrandCreated) onBrandCreated(newBrand);
+                }
+                setActiveBrandId(targetBrandId);
+            }
+
+            if (!targetBrandId) throw new Error("Could not determine brand ID");
+
             // First create a temporary collection to get an ID for analysis
             const tempCollection = await createCollection({
                 name: formData.name,
                 code: formData.code,
-                brand_id: brandId,
+                brand_id: targetBrandId,
                 description: formData.description || undefined
             });
             setCreatedCollection(tempCollection);
@@ -364,7 +402,8 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     const handleClose = () => {
         setCurrentStep(1);
         setDirection(0);
-        setFormData({ name: '', code: '', description: '' });
+        setActiveBrandId(initialBrandId || null);
+        setFormData({ brandName: initialBrandName || '', name: '', code: '', description: '' });
         setUploadedImage(null);
         setImagePreview(null);
         setDaAnalysis(null);
@@ -373,7 +412,7 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
     };
 
     // Validation
-    const isStep1Valid = formData.name.trim() !== '' && formData.code.trim() !== '';
+    const isStep1Valid = formData.name.trim() !== '' && formData.code.trim() !== '' && (!!activeBrandId || formData.brandName.trim() !== '');
     const isStep2Valid = uploadedImage !== null;
 
     if (!isOpen) return null;
@@ -391,8 +430,12 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                 {/* Header */}
                 <div className={styles.header}>
                     <div className={styles.headerLeft}>
-                        <h2 className={styles.title}>Create Collection</h2>
-                        <span className={styles.brandBadge}>{brandName}</span>
+                        <h2 className={styles.title}>{activeBrandId ? 'Create Collection' : 'Create DA'}</h2>
+                        <span className={styles.brandBadge}>
+                            {activeBrandId
+                                ? (availableBrands.find(b => b.id === activeBrandId)?.name || formData.brandName)
+                                : (formData.brandName || 'New Brand')}
+                        </span>
                     </div>
                     <button className={styles.closeBtn} onClick={handleClose}>
                         <X size={20} />
@@ -438,11 +481,33 @@ const CreateCollectionWizard: React.FC<CreateCollectionWizardProps> = ({
                                 className={styles.stepContent}
                             >
                                 <div className={styles.stepHeader}>
-                                    <h3>Collection Details</h3>
-                                    <p>Enter the basic information for your new collection</p>
+                                    <h3>{activeBrandId ? 'Collection Details' : 'Brand & Collection'}</h3>
+                                    <p>Enter the details for your new {activeBrandId ? 'collection' : 'DA'}</p>
                                 </div>
 
                                 <div className={styles.formGrid}>
+                                    {/* Brand Name Input - Only if not pre-selected */}
+                                    {!activeBrandId && (
+                                        <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                                            <label>Brand Name *</label>
+                                            <input
+                                                ref={brandInputRef}
+                                                type="text"
+                                                name="brandName"
+                                                value={formData.brandName}
+                                                onChange={handleInputChange}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        nameInputRef.current?.focus();
+                                                    }
+                                                }}
+                                                placeholder="e.g., My Fashion Brand"
+                                                className={styles.input}
+                                                autoFocus
+                                            />
+                                        </div>
+                                    )}
                                     <div className={styles.formGroup}>
                                         <label>Collection Name *</label>
                                         <input
