@@ -105,6 +105,8 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
   const [libraryGenerations, setLibraryGenerations] = useState<Generation[]>([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [activeLibraryId, setActiveLibraryId] = useState<string | null>(null);
+  // Library expansion state (default: collapsed)
+  const [isLibraryExpanded, setIsLibraryExpanded] = useState(false);
 
   useEffect(() => {
     const info = getUserInfo();
@@ -565,38 +567,60 @@ const HomeLeft: React.FC<HomeLeftProps> = ({
           {/* Library Section: product names with generated images */}
           {onLibrarySelect && (
             <div className={styles.section}>
-              <div className={styles.sectionTitle}>Library</div>
-              {libraryLoading && (
-                <div className={styles.loadingItem}>
-                  <span className={styles.loadingText}>Loading...</span>
-                </div>
+              <button
+                className={styles.sectionTitle}
+                onClick={() => setIsLibraryExpanded(!isLibraryExpanded)}
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '0' }}
+              >
+                <span>LIBRARY</span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  style={{ transform: isLibraryExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {isLibraryExpanded && (
+                <>
+                  {libraryLoading && (
+                    <div className={styles.loadingItem}>
+                      <span className={styles.loadingText}>Loading...</span>
+                    </div>
+                  )}
+                  {!libraryLoading && libraryGenerations.length === 0 && (
+                    <div className={styles.emptyCollections}>No generated visuals yet</div>
+                  )}
+                  {!libraryLoading && libraryGenerations.map((gen) => {
+                    const productName = gen.product?.name || 'Product';
+                    const isActive = activeLibraryId === gen.id;
+                    return (
+                      <button
+                        key={gen.id}
+                        className={`${styles.menuItem} ${isActive ? styles.active : ''}`}
+                        onClick={() => {
+                          setActiveLibraryId(gen.id);
+                          onLibrarySelect(gen);
+                        }}
+                      >
+                        <span className={styles.icon}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                        </span>
+                        <span className={styles.label} title={productName}>{productName}</span>
+                      </button>
+                    );
+                  })}
+                </>
               )}
-              {!libraryLoading && libraryGenerations.length === 0 && (
-                <div className={styles.emptyCollections}>No generated visuals yet</div>
-              )}
-              {!libraryLoading && libraryGenerations.map((gen) => {
-                const productName = gen.product?.name || 'Product';
-                const isActive = activeLibraryId === gen.id;
-                return (
-                  <button
-                    key={gen.id}
-                    className={`${styles.menuItem} ${isActive ? styles.active : ''}`}
-                    onClick={() => {
-                      setActiveLibraryId(gen.id);
-                      onLibrarySelect(gen);
-                    }}
-                  >
-                    <span className={styles.icon}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                    </span>
-                    <span className={styles.label} title={productName}>{productName}</span>
-                  </button>
-                );
-              })}
             </div>
           )}
         </div>
