@@ -153,6 +153,12 @@ function Home() {
 
   // Handle Product Analysis - Uses analyzeProductDirect API (NO collection needed!)
   const handleAnalyze = useCallback(async () => {
+    // If already analyzed, just reset view to show JSON
+    if (productJSON) {
+      setVisuals([]);
+      return;
+    }
+
     // At least one image is required (front OR back)
     if (!frontImage && !backImage) {
       alert('Please upload at least one image (Front or Back).');
@@ -238,7 +244,7 @@ function Home() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [frontImage, backImage, referenceImages, daJSON]);
+  }, [frontImage, backImage, referenceImages, daJSON, productJSON]);
 
   // Handle Analysis Update (from Edit Mode)
   const handleAnalysisUpdate = useCallback((updatedResponse: any) => {
