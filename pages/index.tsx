@@ -17,8 +17,9 @@ import {
   updateMergedPrompts as updatePromptsAPI,
   mergePrompts,
 } from '@/libs/server/HomePage/merging';
+import { Generation } from '@/libs/types/homepage/generation';
 import {
-  startGeneration,
+  executeGeneration,
   pollGenerationStatus,
 } from '@/libs/server/HomePage/generate';
 
@@ -110,6 +111,8 @@ function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [visuals, setVisuals] = useState<any[]>([]);
   const [progress, setProgress] = useState(0);
+  // NEW: Store the full generation response from API
+  const [generationResponse, setGenerationResponse] = useState<Generation | null>(null);
 
   // ==================== HANDLERS ====================
 
@@ -346,7 +349,7 @@ function Home() {
     }
   }, [productJSON]);
 
-  // Handle Generation
+  // Handle Generation - Full flow: create → merge → execute → poll
   const handleGenerate = useCallback(async (visualTypes: string[]) => {
     console.log('🚀 Generate clicked with:', visualTypes);
 
@@ -362,12 +365,15 @@ function Home() {
     }
 
     setIsGenerating(true);
+    setGenerationResponse(null);
+    setVisuals([]);
+    setProgress(0);
 
     try {
       // 1. Create generation if not exists
       let currentGenerationId = generationId;
       if (!currentGenerationId) {
-        console.log('📝 Creating new generation...');
+        console.log('📝 Step 1: Creating generation...');
         const generation = await createGeneration({
           product_id: productId,
           collection_id: selectedCollection.id,
@@ -375,48 +381,53 @@ function Home() {
         });
         currentGenerationId = generation.id;
         setGenerationId(generation.id);
+        setGenerationResponse(generation);
         console.log('✅ Generation created:', generation.id);
       }
 
-      // 2. Ensure collection has DA JSON before merging
+      // 2. Ensure DA JSON exists on collection
       if (!daJSON) {
+        console.log('📝 Step 2: Setting default DA JSON...');
         await updateDAJSON(selectedCollection.id, {
           analyzed_da_json: mockDAAnalysis
         });
       }
 
-      // 3. Merge prompts (creates visuals in DB using backend PromptBuilder)
+      // 3. Merge prompts (backend creates prompts from Product + DA)
+      console.log('📝 Step 3: Merging prompts...');
       await mergePrompts(currentGenerationId);
+      console.log('✅ Prompts merged');
 
-      // 4. Start generation
-      await startGeneration(currentGenerationId, {
-        visualTypes,
-        resolution,
-        aspect_ratio: aspectRatio
-      });
+      // 4. Execute generation (starts Gemini image generation)
+      console.log('📝 Step 4: Executing generation...');
+      const result = await executeGeneration(currentGenerationId);
+      console.log('✅ Generation started:', result);
 
       // 5. Poll for updates
+      console.log('📝 Step 5: Polling for progress...');
       const pollInterval = setInterval(async () => {
         try {
           const status = await pollGenerationStatus(currentGenerationId);
           setVisuals(status.visuals);
           setProgress(status.progress);
 
-          if (status.isComplete) {
+          if (status.isComplete || status.hasFailed) {
             clearInterval(pollInterval);
             setIsGenerating(false);
+            console.log('✅ Generation complete!');
           }
         } catch (error) {
           console.error('Poll error:', error);
-          clearInterval(pollInterval);
-          setIsGenerating(false);
         }
-      }, 2000);
+      }, 3000);
 
       // Safety timeout (10 minutes)
       setTimeout(() => {
         clearInterval(pollInterval);
-        setIsGenerating(false);
+        if (isGenerating) {
+          setIsGenerating(false);
+          console.log('⚠️ Generation timeout');
+        }
       }, 600000);
 
     } catch (error: any) {
@@ -425,7 +436,7 @@ function Home() {
       alert(`Generation failed: ${errorMsg}`);
       setIsGenerating(false);
     }
-  }, [generationId, productId, mergedPrompts, selectedCollection, daJSON]);
+  }, [productId, selectedCollection, generationId, daJSON, isGenerating]);
 
   // Handle prompts change
   const handlePromptsChange = useCallback((key: string, value: string) => {
@@ -596,6 +607,7 @@ function Home() {
               selectedShots={selectedShots}
               ageMode={ageMode}
               isAnalyzing={isAnalyzing}
+              generationResponse={generationResponse}
             />
           </div>
 
