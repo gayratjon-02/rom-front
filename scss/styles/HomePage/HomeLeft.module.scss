@@ -339,7 +339,8 @@
 
 // Collection Item
 .collectionItem {
-  width: 100%;
+  flex: 1;
+  min-width: 0; // Enable truncation in flex container
   display: flex;
   align-items: center;
   gap: 10px;
@@ -436,6 +437,9 @@
   align-items: center;
   gap: 4px;
   padding-right: 8px;
+  width: 100%;
+  min-width: 0; // Enable flex truncation
+  overflow: hidden;
 
   &:hover .collectionActions {
     opacity: 1;
@@ -447,6 +451,7 @@
   gap: 2px;
   opacity: 0;
   transition: opacity 0.15s ease;
+  flex-shrink: 0; // Never shrink icons
 }
 
 .actionBtn {
