@@ -330,23 +330,17 @@
     100% { background-position: 0% 50%; }
 }
 
-// Responsive - Comprehensive breakpoints for visibility (No Scrolling)
+// Responsive - All buttons visible at every screen size (wrap, no scroll)
 
-// Compact Desktop / Laptop (≤1500px) - Hide labels to fit one line
-@media (max-width: 1500px) {
+// Large Desktop (≤1300px) - Start compacting
+@media (max-width: 1300px) {
     .container {
         gap: 16px;
         padding: 12px 16px;
-        justify-content: space-between; // Ensure spacing if single line
     }
 
-    .centerSection {
-        gap: 10px;
-    }
-
-    // Hide labels to save ~200px space
     .optionLabel {
-        display: none;
+        display: none; // Hide labels early to save space
     }
 
     .shotBtn {
@@ -363,75 +357,38 @@
     }
 }
 
-// Small Desktop / Tablet Landscape (≤1200px) - Force Wrap
-@media (max-width: 1200px) {
-    .container {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 12px;
-    }
-
-    .leftSection {
-        order: 1;
-        width: 100%;
-        justify-content: center;
-        margin-bottom: 4px;
-    }
-    
-    .shotTypes {
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .centerSection {
-        order: 2;
-        flex: 1;
-        justify-content: flex-end;
-        width: auto;
-    }
-
-    .rightSection {
-        order: 3;
-        flex-shrink: 0;
-        width: auto;
-    }
-}
-
-// Tablet Portrait (≤900px) - 3 Rows or stacked differently
-// Row 1: Shot Types (Wrapped)
-// Row 2: Options (Centered)
-// Row 3: Generate (Full Width)
-@media (max-width: 900px) {
+// Medium Desktop (≤1100px) - Force vertical stacking  
+@media (max-width: 1100px) {
     .container {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
-        padding: 16px;
+        padding: 12px 16px;
+        min-height: auto;
     }
 
     .leftSection {
         order: 1;
         width: 100%;
         justify-content: center;
-        margin-bottom: 0;
-    }
-
-    .shotTypes {
-        justify-content: center;
-        gap: 8px;
     }
     
+    .shotTypes {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
     .divider {
-        display: none; // Hide divider in vertical layouts
+        display: none;
     }
 
     .centerSection {
         order: 2;
         width: 100%;
         justify-content: center;
-        padding: 0;
+        flex-wrap: wrap;
         gap: 12px;
-        flex: none;
     }
 
     .rightSection {
@@ -442,36 +399,25 @@
     }
 
     .generateBtn {
-        width: 100%; // Full width button
+        width: 100%;
         justify-content: center;
-        padding: 12px;
-        font-size: 15px;
-    }
-    
-    // Make options slightly larger for touch
-    .optionBtn {
-        padding: 8px 12px;
+        padding: 12px 24px;
     }
 }
 
-// Mobile (≤600px) - Optimized visibility
-@media (max-width: 600px) {
+// Tablet (≤900px) - Compact buttons
+@media (max-width: 900px) {
     .container {
         padding: 12px;
-        gap: 12px;
+        gap: 10px;
     }
 
-    .shotTypes {
-        gap: 6px;
-    }
-
-    // Keep labels visible if possible, but compact
     .shotBtn {
         padding: 6px 10px;
         font-size: 11px;
         
         span {
-            display: inline-block; // Force show labels if space permits, user wants visibility
+            font-size: 11px;
         }
 
         svg {
@@ -485,14 +431,19 @@
         font-size: 11px;
     }
 
+    .optionBtn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
     .centerSection {
-        flex-wrap: wrap; // Wrap options if needed
-        gap: 8px;
+        gap: 10px;
     }
 
     .optionButtons {
         flex-wrap: wrap;
         justify-content: center;
+        gap: 6px;
     }
     
     .dividerSmall {
@@ -500,37 +451,42 @@
     }
 }
 
-// Small Mobile (≤480px) - Tight fit
-@media (max-width: 480px) {
+// Mobile (≤600px) - Very compact
+@media (max-width: 600px) {
     .container {
         padding: 10px;
-        gap: 10px;
+        gap: 8px;
     }
 
-    // Left section might need to wrap internal items
     .shotTypes {
-        justify-content: center;
+        gap: 4px;
     }
-    
-    .shotBtn {
-        padding: 6px 8px;
-        font-size: 10px;
-        flex-grow: 1; // Grow to fill rows uniformly
-        justify-content: center;
 
-        // On VERY small screens, text might still need to hide, 
-        // but user asked for "visible buttons", not necessarily text.
-        // Let's try to keep text visible by allowing wrapping.
+    .shotBtn {
+        padding: 5px 8px;
+        font-size: 10px;
+        flex-grow: 1;
+        justify-content: center;
+        
+        span {
+            font-size: 10px;
+        }
+
+        svg {
+            width: 12px;
+            height: 12px;
+        }
     }
     
     .selectAllBtn {
-        flex-grow: 0;
+        padding: 5px 8px;
+        font-size: 10px;
     }
-    
+
     .centerSection {
         gap: 8px;
     }
-    
+
     .optionGroup {
         width: 100%;
         justify-content: center;
@@ -539,17 +495,56 @@
     .optionButtons {
         width: 100%;
         justify-content: center;
-        display: flex;
+        gap: 4px;
     }
     
     .optionBtn {
-        flex: 1; // Distribute space evenly
+        flex: 1;
         justify-content: center;
-        padding: 8px;
+        padding: 6px 8px;
+        font-size: 10px;
     }
 
     .generateBtn {
-        padding: 12px;
+        padding: 10px;
+        font-size: 13px;
+    }
+}
+
+// Extra Small Mobile (≤400px) - Minimal padding
+@media (max-width: 400px) {
+    .container {
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .shotTypes {
+        gap: 3px;
+    }
+
+    .shotBtn {
+        padding: 4px 6px;
+        font-size: 9px;
+        
+        svg {
+            width: 10px;
+            height: 10px;
+        }
+    }
+    
+    .selectAllBtn {
+        padding: 4px 6px;
+        font-size: 9px;
+    }
+    
+    .optionBtn {
+        padding: 5px 6px;
+        font-size: 9px;
+    }
+
+    .generateBtn {
+        padding: 8px;
+        font-size: 12px;
     }
 }
 
