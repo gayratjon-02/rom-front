@@ -843,24 +843,12 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     const [generationId, setGenerationId] = useState<string | null>(null);
     const [isDownloading, setIsDownloading] = useState(false);
 
-    // Library view: use visuals from libraryGeneration when viewing a Library item
+    // Library view: when user clicked a product in Library, show THAT generation's visuals (not parentVisuals)
     const isLibraryView = !!libraryGeneration;
+    const libraryVisuals = (libraryGeneration?.visuals ?? libraryGeneration?.visual_outputs ?? []) as VisualOutput[];
 
-    // Sync library visuals to local state when library generation changes
-    useEffect(() => {
-        if (libraryGeneration) {
-            const libVisuals = libraryGeneration.visuals || libraryGeneration.visual_outputs || [];
-            setLocalVisuals(libVisuals);
-        } else if (!parentVisuals) {
-            // Clear local visuals if not in library mode and not using parent visuals (e.g. fresh state)
-            // But be careful not to clear if we are in local generation mode
-        }
-    }, [libraryGeneration]);
-
-    // Use parent visuals/progress if provided (or local visuals which now hold library visuals too)
-    // If parentVisuals is provided, it takes precedence (active generation flow via socket)
-    // Otherwise rely on localVisuals (which is either local generation or synced library visuals)
-    const visuals = parentVisuals || localVisuals;
+    // CRITICAL: In library view use library visuals first; otherwise parent (current generation) or local
+    const visuals = isLibraryView ? libraryVisuals : (parentVisuals || localVisuals);
 
     // Progress follows similar pattern
     const progress = parentProgress ?? localProgress;
