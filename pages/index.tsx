@@ -325,6 +325,27 @@ function Home() {
     }
   }, [daJSON]);
 
+  // Handle DA Update (from Edit Mode)
+  const handleDAUpdate = useCallback((updatedDA: DAJSON) => {
+    console.log('🔄 DA JSON Updated:', updatedDA);
+    setDAJSON(updatedDA);
+
+    // Re-generate prompts with new DA
+    if (productJSON) {
+      const basePrompt = `A ${productJSON.type} in ${productJSON.color} (${productJSON.color_hex}) ${productJSON.material}. Texture: ${productJSON.texture}. ${productJSON.details}. Shot in ${updatedDA.background.description} with ${updatedDA.lighting.type} (${updatedDA.lighting.temperature}) lighting. ${updatedDA.mood} aesthetic.`;
+
+      const prompts: Record<string, string> = {
+        duo: `Father & Son duo shot. ${basePrompt} Lifestyle setting.`,
+        solo: `Male Model solo shot. ${basePrompt} Professional pose.`,
+        flatlay_front: `Flatlay front view. ${basePrompt} Clean arrangement.`,
+        flatlay_back: `Flatlay angled back view. ${basePrompt} Detail focus.`,
+        closeup_front: `Close-up detail front. Focus on ${productJSON.material} texture and ${productJSON.logo_front}. ${updatedDA.background.description}.`,
+        closeup_back: `Close-up detail back. Focus on features and ${productJSON.logo_back}. ${updatedDA.background.description}.`,
+      };
+      setMergedPrompts(prompts);
+    }
+  }, [productJSON]);
+
   // Handle Generation
   const handleGenerate = useCallback(async (visualTypes: string[]) => {
     console.log('🚀 Generate clicked with:', visualTypes);
@@ -357,22 +378,15 @@ function Home() {
         console.log('✅ Generation created:', generation.id);
       }
 
-      // 2. Merge prompts (creates visuals in DB)
-      try {
-        await mergePrompts(currentGenerationId);
-      } catch (error: any) {
-        if (error?.message?.includes('Collection DA')) {
-          await updateDAJSON(selectedCollection.id, {
-            analyzed_da_json: daJSON || mockDAAnalysis
-          });
-          await mergePrompts(currentGenerationId);
-        } else {
-          throw error;
-        }
+      // 2. Ensure collection has DA JSON before merging
+      if (!daJSON) {
+        await updateDAJSON(selectedCollection.id, {
+          analyzed_da_json: mockDAAnalysis
+        });
       }
 
-      // 3. Update prompts with user's edited version
-      await updatePromptsAPI(currentGenerationId, { prompts: mergedPrompts });
+      // 3. Merge prompts (creates visuals in DB using backend PromptBuilder)
+      await mergePrompts(currentGenerationId);
 
       // 4. Start generation
       await startGeneration(currentGenerationId, {
@@ -576,6 +590,7 @@ function Home() {
               fullAnalysisResponse={fullAnalysisResponse}
               productId={productId}
               onAnalysisUpdate={handleAnalysisUpdate}
+              onDAUpdate={handleDAUpdate}
               daJSON={daJSON}
               mergedPrompts={mergedPrompts}
               selectedShots={selectedShots}
