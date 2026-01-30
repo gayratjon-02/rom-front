@@ -124,14 +124,6 @@ function Home() {
   const handleCollectionSelect = useCallback((collection: Collection | null, brand: Brand | null) => {
     setSelectedCollection(collection);
     if (brand) setSelectedBrand(brand);
-
-    // Reset product state when collection changes
-    setProductJSON(null);
-    setProductId(null);
-    setMergedPrompts({});
-    setGenerationId(null);
-    setVisuals([]);
-    setProgress(0);
   }, []);
 
   // Fetch DA when collection changes
@@ -358,7 +350,7 @@ function Home() {
         const generation = await createGeneration({
           product_id: productId,
           collection_id: selectedCollection.id,
-          generation_type: 'product_visual'
+          generation_type: 'product_visuals'
         });
         currentGenerationId = generation.id;
         setGenerationId(generation.id);
@@ -383,7 +375,11 @@ function Home() {
       await updatePromptsAPI(currentGenerationId, { prompts: mergedPrompts });
 
       // 4. Start generation
-      await startGeneration(currentGenerationId, { visualTypes });
+      await startGeneration(currentGenerationId, {
+        visualTypes,
+        resolution,
+        aspect_ratio: aspectRatio
+      });
 
       // 5. Poll for updates
       const pollInterval = setInterval(async () => {
