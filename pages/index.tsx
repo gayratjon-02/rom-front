@@ -7,7 +7,7 @@ import HomeMiddle, { ProductJSON, DAJSON } from "@/libs/components/homePage/Home
 import HomeBottom from "@/libs/components/homePage/HomeButtom";
 import { Brand } from "@/libs/types/homepage/brand";
 import { Collection } from "@/libs/types/homepage/collection";
-// 🔒 XAVFSIZLIK: withAuth HOC import
+// Auth HOC import for protected routes
 import { withAuth } from "@/libs/components/auth/withAuth";
 // API imports
 import { createProduct, analyzeProduct } from '@/libs/server/HomePage/product';
@@ -59,7 +59,7 @@ const mockDAAnalysis: DAJSON = {
   quality: 'professional editorial',
 };
 
-// 🔒 XAVFSIZLIK: Protected component - login kerak
+// Protected component - requires authentication
 function Home() {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -94,10 +94,16 @@ function Home() {
   const [mergedPrompts, setMergedPrompts] = useState<Record<string, string>>({});
   const [generationId, setGenerationId] = useState<string | null>(null);
 
+  // NEW: Resolution & Aspect Ratio State
+  const [resolution, setResolution] = useState<'4k' | '2k'>('4k');
+  const [aspectRatio, setAspectRatio] = useState<'4:5' | '1:1' | '9:16'>('4:5');
+
   // Shot Selection
   const [selectedShots, setSelectedShots] = useState<string[]>([
     'duo', 'solo', 'flatlay_front', 'flatlay_back', 'closeup_front', 'closeup_back'
   ]);
+
+
   const [ageMode, setAgeMode] = useState<'adult' | 'kid'>('adult');
 
   // Generation State
@@ -154,7 +160,7 @@ function Home() {
   const handleAnalyze = useCallback(async () => {
     // At least one image is required (front OR back)
     if (!frontImage && !backImage) {
-      alert('Iltimos, kamida bitta rasm yuklang (old yoki orqa).');
+      alert('Please upload at least one image (Front or Back).');
       return;
     }
 
@@ -248,7 +254,7 @@ function Home() {
     } catch (error: any) {
       console.error('Analysis failed:', error);
       const errorMessage = error?.messages?.join(', ') || error?.message || 'Unknown error';
-      alert(`Tahlil qilish muvaffaqiyatsiz: ${errorMessage}`);
+      alert(`Analysis failed: ${errorMessage}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -331,43 +337,58 @@ function Home() {
   const handleGenerate = useCallback(async (visualTypes: string[]) => {
     console.log('🚀 Generate clicked with:', visualTypes);
 
-    if (!generationId) {
-      alert('Generation ID topilmadi. Iltimos, qayta urinib ko\'ring.');
+    // Validate required data
+    if (!productId) {
+      alert('Please analyze a product first.');
       return;
     }
 
     if (!selectedCollection) {
-      alert('Kolleksiya tanlang.');
+      alert('Please select a collection.');
       return;
     }
 
     setIsGenerating(true);
 
     try {
-      // 1. Merge prompts (creates visuals in DB)
+      // 1. Create generation if not exists
+      let currentGenerationId = generationId;
+      if (!currentGenerationId) {
+        console.log('📝 Creating new generation...');
+        const generation = await createGeneration({
+          product_id: productId,
+          collection_id: selectedCollection.id,
+          generation_type: 'product_visual'
+        });
+        currentGenerationId = generation.id;
+        setGenerationId(generation.id);
+        console.log('✅ Generation created:', generation.id);
+      }
+
+      // 2. Merge prompts (creates visuals in DB)
       try {
-        await mergePrompts(generationId);
+        await mergePrompts(currentGenerationId);
       } catch (error: any) {
         if (error?.message?.includes('Collection DA')) {
           await updateDAJSON(selectedCollection.id, {
             analyzed_da_json: daJSON || mockDAAnalysis
           });
-          await mergePrompts(generationId);
+          await mergePrompts(currentGenerationId);
         } else {
           throw error;
         }
       }
 
-      // 2. Update prompts with user's edited version
-      await updatePromptsAPI(generationId, { prompts: mergedPrompts });
+      // 3. Update prompts with user's edited version
+      await updatePromptsAPI(currentGenerationId, { prompts: mergedPrompts });
 
-      // 3. Start generation
-      await startGeneration(generationId, { visualTypes });
+      // 4. Start generation
+      await startGeneration(currentGenerationId, { visualTypes });
 
-      // 4. Poll for updates
+      // 5. Poll for updates
       const pollInterval = setInterval(async () => {
         try {
-          const status = await pollGenerationStatus(generationId);
+          const status = await pollGenerationStatus(currentGenerationId);
           setVisuals(status.visuals);
           setProgress(status.progress);
 
@@ -382,18 +403,19 @@ function Home() {
         }
       }, 2000);
 
-      // Safety timeout
+      // Safety timeout (10 minutes)
       setTimeout(() => {
         clearInterval(pollInterval);
         setIsGenerating(false);
       }, 600000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Generation failed:', error);
-      alert('Generatsiya muvaffaqiyatsiz bo\'ldi.');
+      const errorMsg = error?.errors?.join(', ') || error?.message || 'Generation failed';
+      alert(`Generation failed: ${errorMsg}`);
       setIsGenerating(false);
     }
-  }, [generationId, mergedPrompts, selectedCollection, daJSON]);
+  }, [generationId, productId, mergedPrompts, selectedCollection, daJSON]);
 
   // Handle prompts change
   const handlePromptsChange = useCallback((key: string, value: string) => {
@@ -573,6 +595,10 @@ function Home() {
             onShotsChange={setSelectedShots}
             ageMode={ageMode}
             onAgeModeChange={setAgeMode}
+            resolution={resolution}
+            onResolutionChange={setResolution}
+            aspectRatio={aspectRatio}
+            onAspectRatioChange={setAspectRatio}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
             isAnalyzed={isAnalyzed}
@@ -601,5 +627,5 @@ function Home() {
   );
 }
 
-// 🔒 XAVFSIZLIK: withAuth HOC bilan wrap qilish
+// Wrap with auth HOC for route protection
 export default withAuth(Home);
