@@ -61,6 +61,7 @@ interface HomeMiddleProps {
     parentProgress?: number;
     isGeneratingVisuals?: boolean;
     onReanalyze?: () => void;
+    onSaveComplete?: () => void; // Called after save to trigger re-merge flow
 }
 
 export interface ProductJSON {
@@ -416,6 +417,11 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
             setSaveSuccess(true);
             setIsEditing(false);
             setTimeout(() => setSaveSuccess(false), 3000);
+
+            // Notify parent that save completed - triggers re-merge flow
+            if (onSaveComplete) {
+                onSaveComplete();
+            }
 
         } catch (error: any) {
             console.error('Save failed:', error);
@@ -821,6 +827,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     parentProgress,
     isGeneratingVisuals = false,
     onReanalyze,
+    onSaveComplete,
 }) => {
     // Visuals State - use parent values if provided, otherwise local state
     const [localVisuals, setLocalVisuals] = useState<VisualOutput[]>([]);

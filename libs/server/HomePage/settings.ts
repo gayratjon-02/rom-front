@@ -40,6 +40,19 @@ export interface UpdateApiKeyData {
     apiKey: string | null;
 }
 
+export interface ApiKeyStatus {
+    anthropic: {
+        hasSystemKey: boolean;
+        hasUserKey: boolean;
+        activeSource: 'user' | 'system' | 'none';
+    };
+    gemini: {
+        hasSystemKey: boolean;
+        hasUserKey: boolean;
+        activeSource: 'user' | 'system' | 'none';
+    };
+}
+
 function getAuthHeaders(): HeadersInit {
     const token = getAuthToken();
     return {
@@ -139,6 +152,40 @@ export async function updateApiKey(data: UpdateApiKeyData): Promise<{ success: b
         }
 
         return responseData;
+    } catch (error) {
+        if (error instanceof AuthApiError) {
+            throw error;
+        }
+
+        throw new AuthApiError(500, [Messages.CONNECTION_ERROR], {
+            statusCode: 500,
+            message: Messages.NETWORK_ERROR,
+            error: Messages.INTERNAL_SERVER_ERROR,
+        });
+    }
+}
+
+/**
+ * Get API key status (which keys are active: user or system)
+ */
+export async function getApiKeyStatus(): Promise<ApiKeyStatus> {
+    try {
+        const response = await fetch(`${API_BASE}/users/getApiKeyStatus`, {
+            method: "GET",
+            headers: getAuthHeaders(),
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            const errorMessages = Array.isArray(responseData.message)
+                ? responseData.message
+                : [responseData.message || "Failed to fetch API key status"];
+
+            throw new AuthApiError(response.status, errorMessages, responseData);
+        }
+
+        return responseData as ApiKeyStatus;
     } catch (error) {
         if (error instanceof AuthApiError) {
             throw error;

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useTheme } from '@mui/material';
 import { withAuth } from '@/libs/components/auth/withAuth';
-import { getSettings, updateSettings, updateApiKey, UserSettings } from '@/libs/server/HomePage/settings';
+import { getSettings, updateSettings, updateApiKey, getApiKeyStatus, UserSettings, ApiKeyStatus } from '@/libs/server/HomePage/settings';
 import { logout } from '@/libs/server/HomePage/signup';
 import styles from '@/scss/styles/Settings.module.scss';
 
@@ -16,6 +16,7 @@ function Settings() {
     // State
     const [activeTab, setActiveTab] = useState<TabType>('brand');
     const [settings, setSettings] = useState<UserSettings | null>(null);
+    const [apiStatus, setApiStatus] = useState<ApiKeyStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -27,10 +28,8 @@ function Settings() {
     const [email, setEmail] = useState('');
 
     // API Key states
-    const [apiKeyOpenai, setApiKeyOpenai] = useState('');
     const [apiKeyAnthropic, setApiKeyAnthropic] = useState('');
     const [apiKeyGemini, setApiKeyGemini] = useState('');
-    const [showOpenai, setShowOpenai] = useState(false);
     const [showAnthropic, setShowAnthropic] = useState(false);
     const [showGemini, setShowGemini] = useState(false);
 
@@ -43,8 +42,15 @@ function Settings() {
         try {
             setLoading(true);
             setError(null);
-            const data = await getSettings();
+
+            // Fetch settings and API status in parallel
+            const [data, status] = await Promise.all([
+                getSettings(),
+                getApiKeyStatus().catch(() => null), // Don't fail if status fetch fails
+            ]);
+
             setSettings(data);
+            setApiStatus(status);
 
             // Populate form fields
             setBrandBrief(data.brand_brief || '');
@@ -245,59 +251,21 @@ function Settings() {
                         <div className={styles.panel}>
                             <div className={styles.panelHeader}>
                                 <h2>API Key Configuration</h2>
-                                <p>Configure your AI service API keys. Keys are stored securely and encrypted.</p>
+                                <p>Configure your AI service API keys. If you set your own key, it will be used instead of the system default.</p>
                             </div>
                             <div className={styles.panelContent}>
-                                {/* OpenAI API Key */}
+                                {/* Anthropic API Key (Claude - for analysis) */}
                                 <div className={styles.apiKeyGroup}>
                                     <div className={styles.apiKeyHeader}>
-                                        <label>OpenAI API Key</label>
-                                        {settings?.api_key_openai && (
-                                            <span className={styles.keyStatus}>Configured</span>
-                                        )}
-                                    </div>
-                                    <div className={styles.apiKeyInput}>
-                                        <input
-                                            type={showOpenai ? 'text' : 'password'}
-                                            value={apiKeyOpenai}
-                                            onChange={(e) => setApiKeyOpenai(e.target.value)}
-                                            placeholder={settings?.api_key_openai || 'sk-...'}
-                                        />
-                                        <button
-                                            className={styles.toggleVisibility}
-                                            onClick={() => setShowOpenai(!showOpenai)}
-                                            type="button"
-                                        >
-                                            {showOpenai ? (
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                                    <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                                </svg>
-                                            ) : (
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                                </svg>
+                                        <label>Anthropic API Key (Claude)</label>
+                                        <div className={styles.keyStatusGroup}>
+                                            {apiStatus?.anthropic && (
+                                                <span className={`${styles.keyStatus} ${apiStatus.anthropic.activeSource === 'user' ? styles.userKey : styles.systemKey}`}>
+                                                    {apiStatus.anthropic.activeSource === 'user' ? 'Your Key' :
+                                                     apiStatus.anthropic.activeSource === 'system' ? 'System Key' : 'Not Configured'}
+                                                </span>
                                             )}
-                                        </button>
-                                        <button
-                                            className={styles.saveKeyButton}
-                                            onClick={() => handleSaveApiKey('openai', apiKeyOpenai)}
-                                            disabled={saving}
-                                        >
-                                            Save
-                                        </button>
-                                    </div>
-                                    <p className={styles.hint}>Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">OpenAI Platform</a></p>
-                                </div>
-
-                                {/* Anthropic API Key */}
-                                <div className={styles.apiKeyGroup}>
-                                    <div className={styles.apiKeyHeader}>
-                                        <label>Anthropic API Key</label>
-                                        {settings?.api_key_anthropic && (
-                                            <span className={styles.keyStatus}>Configured</span>
-                                        )}
+                                        </div>
                                     </div>
                                     <div className={styles.apiKeyInput}>
                                         <input
@@ -331,16 +299,23 @@ function Settings() {
                                             Save
                                         </button>
                                     </div>
-                                    <p className={styles.hint}>Get your API key from <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a></p>
+                                    <p className={styles.hint}>
+                                        Used for product analysis and prompt generation. Get your API key from <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">Anthropic Console</a>
+                                    </p>
                                 </div>
 
-                                {/* Gemini API Key */}
+                                {/* Gemini API Key (for image generation) */}
                                 <div className={styles.apiKeyGroup}>
                                     <div className={styles.apiKeyHeader}>
                                         <label>Google Gemini API Key</label>
-                                        {settings?.api_key_gemini && (
-                                            <span className={styles.keyStatus}>Configured</span>
-                                        )}
+                                        <div className={styles.keyStatusGroup}>
+                                            {apiStatus?.gemini && (
+                                                <span className={`${styles.keyStatus} ${apiStatus.gemini.activeSource === 'user' ? styles.userKey : styles.systemKey}`}>
+                                                    {apiStatus.gemini.activeSource === 'user' ? 'Your Key' :
+                                                     apiStatus.gemini.activeSource === 'system' ? 'System Key' : 'Not Configured'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className={styles.apiKeyInput}>
                                         <input

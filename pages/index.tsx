@@ -515,6 +515,18 @@ function Home() {
     });
   }, [generationId]);
 
+  // Handle save complete - Clear merged state so Merge button appears again
+  const handleSaveComplete = useCallback(() => {
+    console.log('💾 [Index] Save completed - clearing merged state for re-merge');
+    // Clear merged prompts so Merge button shows
+    setMergedPrompts({});
+    // Clear generation response to reset merge state
+    setGenerationResponse(null);
+    // Reset visuals
+    setVisuals([]);
+    setProgress(0);
+  }, []);
+
   const isAnalyzed = !!productJSON;
   const hasDA = !!daJSON;
 
@@ -680,6 +692,7 @@ function Home() {
               parentProgress={progress}
               isGeneratingVisuals={isGenerating}
               onReanalyze={() => handleAnalyze(true)}
+              onSaveComplete={handleSaveComplete}
             />
           </div>
 
