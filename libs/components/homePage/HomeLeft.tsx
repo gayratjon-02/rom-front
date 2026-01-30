@@ -29,7 +29,7 @@ interface HomeLeftProps {
   onFrontImageChange?: (file: File | null) => void;
   onBackImageChange?: (file: File | null) => void;
   onReferenceImagesChange?: (files: File[]) => void;
-  onAnalyze?: () => void;
+  onAnalyze?: (forceReanalyze?: boolean) => void;
   isAnalyzing?: boolean;
   isAnalyzed?: boolean;
   // NEW: JSON Panel props

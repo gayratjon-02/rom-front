@@ -12,7 +12,7 @@ interface ProductUploadSectionProps {
     onFrontImageChange: (file: File | null) => void;
     onBackImageChange: (file: File | null) => void;
     onReferenceImagesChange?: (files: File[]) => void;
-    onAnalyze: () => void;
+    onAnalyze: (forceReanalyze?: boolean) => void;
     isAnalyzing?: boolean;
     isAnalyzed?: boolean;
 }
@@ -211,7 +211,7 @@ const ProductUploadSection: React.FC<ProductUploadSectionProps> = ({
 
             <button
                 className={`${styles.analyzeBtn} ${canAnalyze ? styles.ready : styles.disabled}`}
-                onClick={onAnalyze}
+                onClick={() => onAnalyze(isAnalyzed)}
                 disabled={!canAnalyze}
             >
                 {isAnalyzing ? (

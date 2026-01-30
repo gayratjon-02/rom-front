@@ -186,9 +186,9 @@ function Home() {
   }, [selectedCollection?.id]);
 
   // Handle Product Analysis - Uses analyzeProductDirect API (NO collection needed!)
-  const handleAnalyze = useCallback(async () => {
-    // If already analyzed, just reset view to show JSON
-    if (productJSON) {
+  const handleAnalyze = useCallback(async (forceReanalyze = false) => {
+    // If already analyzed and not forcing reanalysis, just reset view to show JSON
+    if (productJSON && !forceReanalyze) {
       setVisuals([]);
       return;
     }
@@ -197,6 +197,16 @@ function Home() {
     if (!frontImage || !backImage) {
       alert('Please upload both FRONT and BACK images.');
       return;
+    }
+
+    // Reset previous analysis state when reanalyzing
+    if (forceReanalyze) {
+      setProductJSON(null);
+      setFullAnalysisResponse(null);
+      setProductId(null);
+      setMergedPrompts({});
+      setGenerationResponse(null);
+      setVisuals([]);
     }
 
     setIsAnalyzing(true);
@@ -635,7 +645,7 @@ function Home() {
               parentVisuals={visuals}
               parentProgress={progress}
               isGeneratingVisuals={isGenerating}
-              onReanalyze={handleAnalyze}
+              onReanalyze={() => handleAnalyze(true)}
             />
           </div>
 
