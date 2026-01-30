@@ -1,6 +1,8 @@
 import { ApiError } from "@/libs/types/signup/signup.input";
 
-export const API_URL_NEXT = `${process.env.NEXT_PUBLIC_API_URL}`;
+export const API_URL_NEXT =
+	(typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) ||
+	'http://localhost:5031';
 
 // Custom error class for API errors
 export class AuthApiError extends Error {

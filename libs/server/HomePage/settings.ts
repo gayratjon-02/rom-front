@@ -45,11 +45,13 @@ export interface ApiKeyStatus {
         hasSystemKey: boolean;
         hasUserKey: boolean;
         activeSource: 'user' | 'system' | 'none';
+        model: string;
     };
     gemini: {
         hasSystemKey: boolean;
         hasUserKey: boolean;
         activeSource: 'user' | 'system' | 'none';
+        model: string;
     };
 }
 
@@ -165,8 +167,14 @@ export async function updateApiKey(data: UpdateApiKeyData): Promise<{ success: b
     }
 }
 
+const defaultApiKeyStatus: ApiKeyStatus = {
+    anthropic: { hasSystemKey: false, hasUserKey: false, activeSource: 'none', model: '' },
+    gemini: { hasSystemKey: false, hasUserKey: false, activeSource: 'none', model: '' },
+};
+
 /**
- * Get API key status (which keys are active: user or system)
+ * Get API key status (which keys are active: user or system) and current AI models.
+ * On 404 (endpoint missing) returns default status so Settings page still works.
  */
 export async function getApiKeyStatus(): Promise<ApiKeyStatus> {
     try {
@@ -177,24 +185,25 @@ export async function getApiKeyStatus(): Promise<ApiKeyStatus> {
 
         const responseData = await response.json();
 
+        if (response.status === 404) {
+            return defaultApiKeyStatus;
+        }
+
         if (!response.ok) {
             const errorMessages = Array.isArray(responseData.message)
                 ? responseData.message
                 : [responseData.message || "Failed to fetch API key status"];
-
             throw new AuthApiError(response.status, errorMessages, responseData);
         }
 
-        return responseData as ApiKeyStatus;
+        return {
+            anthropic: { ...defaultApiKeyStatus.anthropic, ...responseData.anthropic, model: responseData.anthropic?.model ?? '' },
+            gemini: { ...defaultApiKeyStatus.gemini, ...responseData.gemini, model: responseData.gemini?.model ?? '' },
+        } as ApiKeyStatus;
     } catch (error) {
         if (error instanceof AuthApiError) {
             throw error;
         }
-
-        throw new AuthApiError(500, [Messages.CONNECTION_ERROR], {
-            statusCode: 500,
-            message: Messages.NETWORK_ERROR,
-            error: Messages.INTERNAL_SERVER_ERROR,
-        });
+        return defaultApiKeyStatus;
     }
 }

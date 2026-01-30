@@ -62,7 +62,7 @@ export const useGenerationSocket = (
         const token = getAuthToken();
 
         // Construct SSE URL with token
-        const sseUrl = `${apiUrl}/generations/${generationId}/stream?token=${token || ''}`;
+        const sseUrl = `${apiUrl}/api/generations/${generationId}/stream?token=${token || ''}`;
 
         console.log('🔗 [SSE] Connecting to:', sseUrl);
 
