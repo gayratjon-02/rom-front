@@ -899,13 +899,34 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
         })();
     }, [selectedCollection?.id]);
 
-    // Use passed DA or fetched DA
+    // Use passed DA or fetched DA (Legacy)
     const activeDA = daJSON || collectionDA;
 
     // Calculate effective merged prompts: use generationResponse.merged_prompts if available, else locally merged prompts
     const effectiveMergedPrompts = generationResponse?.merged_prompts || mergedPrompts;
     // In library view use libraryGeneration.id for download; otherwise current generation
     const effectiveGenerationId = isLibraryView ? (libraryGeneration?.id ?? null) : (generationResponse?.id || null);
+
+    // Derive effective Product JSON and DA JSON
+    const effectiveProductJSON = isLibraryView
+        ? (libraryGeneration?.product?.final_product_json || libraryGeneration?.product?.analyzed_product_json || null)
+        : productJSON;
+
+    const effectiveDAJSON = isLibraryView
+        ? (libraryGeneration?.collection?.analyzed_da_json || null)
+        : activeDA;
+
+    // Derive effective full response for AnalyzedState
+    const effectiveFullResponse = isLibraryView
+        ? {
+            success: true,
+            product_id: libraryGeneration?.product?.id,
+            analysis: effectiveProductJSON,
+            imageUrl: libraryGeneration?.product?.front_image_url,
+            front_image_url: libraryGeneration?.product?.front_image_url,
+            back_image_url: libraryGeneration?.product?.back_image_url,
+        }
+        : fullAnalysisResponse;
 
     const handleRetry = useCallback(async (index: number) => {
         const targetGenId = effectiveGenerationId;
@@ -1041,12 +1062,12 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
             <div className={styles.content}>
                 {visuals.length === 0 ? (
                     // Show AnalyzedState if product has been analyzed, otherwise show EmptyState
-                    productJSON ? (
+                    effectiveProductJSON ? (
                         <AnalyzedState
                             isDarkMode={isDarkMode}
-                            productJSON={productJSON}
-                            fullAnalysisResponse={fullAnalysisResponse}
-                            daJSON={daJSON || collectionDA}
+                            productJSON={effectiveProductJSON}
+                            fullAnalysisResponse={effectiveFullResponse}
+                            daJSON={effectiveDAJSON}
                             productId={productId || undefined}
                             collectionId={selectedCollection?.id}
                             onAnalysisUpdate={onAnalysisUpdate}
