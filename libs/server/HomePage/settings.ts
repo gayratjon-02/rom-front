@@ -18,6 +18,8 @@ export interface UserSettings {
     api_key_openai: string | null;
     api_key_anthropic: string | null;
     api_key_gemini: string | null;
+    claude_model: string | null;
+    gemini_model: string | null;
     language: string | null;
     theme: string | null;
     notifications_enabled: boolean;
@@ -30,6 +32,8 @@ export interface UpdateSettingsData {
     api_key_openai?: string;
     api_key_anthropic?: string;
     api_key_gemini?: string;
+    claude_model?: string | null;
+    gemini_model?: string | null;
     language?: string;
     theme?: string;
     notifications_enabled?: boolean;

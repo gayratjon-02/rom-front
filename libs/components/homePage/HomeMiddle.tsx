@@ -839,6 +839,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     const [localProgress, setLocalProgress] = useState(0);
     const [localIsGenerating, setLocalIsGenerating] = useState(false);
     const [generationId, setGenerationId] = useState<string | null>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Use parent visuals/progress if provided
     const visuals = parentVisuals || localVisuals;
@@ -950,6 +951,19 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     const effectiveMergedPrompts = generationResponse?.merged_prompts || mergedPrompts;
     const effectiveGenerationId = generationResponse?.id || null;
 
+    const handleDownloadAll = async () => {
+        if (!effectiveGenerationId) return;
+        setIsDownloading(true);
+        try {
+            console.log('⬇️ Downloading all images for:', effectiveGenerationId);
+            await triggerDownload(effectiveGenerationId);
+        } catch (error) {
+            console.error('❌ Download failed:', error);
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     // WebSocket updates are handled by parent component (pages/index.tsx)
     // and passed via parentVisuals prop - no duplicate subscription needed
 
@@ -987,9 +1001,14 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                     <button
                         className={styles.downloadBtn}
                         onClick={handleDownloadAll}
+                        disabled={isDownloading}
                     >
-                        <Download size={18} />
-                        Download All
+                        {isDownloading ? (
+                            <Loader2 size={18} className={styles.spin} />
+                        ) : (
+                            <Download size={18} />
+                        )}
+                        {isDownloading ? 'Downloading...' : 'Download All'}
                     </button>
                 </motion.div>
             )}

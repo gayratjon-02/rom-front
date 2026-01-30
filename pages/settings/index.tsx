@@ -32,6 +32,9 @@ function Settings() {
     const [apiKeyGemini, setApiKeyGemini] = useState('');
     const [showAnthropic, setShowAnthropic] = useState(false);
     const [showGemini, setShowGemini] = useState(false);
+    // Model overrides (user can change)
+    const [claudeModel, setClaudeModel] = useState('');
+    const [geminiModel, setGeminiModel] = useState('');
 
     // Fetch settings on mount
     useEffect(() => {
@@ -56,6 +59,8 @@ function Settings() {
             setBrandBrief(data.brand_brief || '');
             setName(data.name || '');
             setEmail(data.email || '');
+            setClaudeModel(data.claude_model ?? status?.anthropic?.model ?? '');
+            setGeminiModel(data.gemini_model ?? status?.gemini?.model ?? '');
         } catch (err: any) {
             setError(err.message || 'Failed to load settings');
         } finally {
@@ -106,10 +111,27 @@ function Settings() {
             setError(null);
             await updateApiKey({ keyType, apiKey: value || null });
             showSuccess(`${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API key updated!`);
-            // Refresh settings to get masked key
             await fetchSettings();
         } catch (err: any) {
             setError(err.message || 'Failed to save API key');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Save AI models (Claude / Gemini)
+    const handleSaveModels = async () => {
+        try {
+            setSaving(true);
+            setError(null);
+            await updateSettings({
+                claude_model: claudeModel.trim() || null,
+                gemini_model: geminiModel.trim() || null,
+            });
+            showSuccess('AI models updated!');
+            await fetchSettings();
+        } catch (err: any) {
+            setError(err.message || 'Failed to save models');
         } finally {
             setSaving(false);
         }
@@ -254,7 +276,57 @@ function Settings() {
                                 <p>Configure your AI service API keys. If you set your own key, it will be used instead of the system default.</p>
                             </div>
                             <div className={styles.panelContent}>
-                                {/* Anthropic API Key (Claude - for analysis) */}
+                                {/* Models table: API | Model to Use | Purpose */}
+                                <div className={styles.modelsTableWrap}>
+                                    <table className={styles.modelsTable}>
+                                        <thead>
+                                            <tr>
+                                                <th>API</th>
+                                                <th>Model to Use</th>
+                                                <th>Purpose</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Claude</td>
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        className={styles.modelInput}
+                                                        value={claudeModel}
+                                                        onChange={(e) => setClaudeModel(e.target.value)}
+                                                        placeholder={apiStatus?.anthropic?.model || 'claude-sonnet-4-20250514'}
+                                                    />
+                                                </td>
+                                                <td>Product & DA analysis</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Gemini</td>
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        className={styles.modelInput}
+                                                        value={geminiModel}
+                                                        onChange={(e) => setGeminiModel(e.target.value)}
+                                                        placeholder={apiStatus?.gemini?.model || 'imagen-3.0-generate-002'}
+                                                    />
+                                                </td>
+                                                <td>Image generation</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className={styles.formActions} style={{ marginBottom: '24px' }}>
+                                    <button
+                                        className={styles.saveButton}
+                                        onClick={handleSaveModels}
+                                        disabled={saving}
+                                    >
+                                        {saving ? 'Saving...' : 'Save model settings'}
+                                    </button>
+                                </div>
+
+                                {/* Anthropic API Key (Claude) */}
                                 <div className={styles.apiKeyGroup}>
                                     <div className={styles.apiKeyHeader}>
                                         <label>Anthropic API Key (Claude)</label>
@@ -304,7 +376,7 @@ function Settings() {
                                     </p>
                                 </div>
 
-                                {/* Gemini API Key (for image generation) */}
+                                {/* Google Gemini API Key */}
                                 <div className={styles.apiKeyGroup}>
                                     <div className={styles.apiKeyHeader}>
                                         <label>Google Gemini API Key</label>
