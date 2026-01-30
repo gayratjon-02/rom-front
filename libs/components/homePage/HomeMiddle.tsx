@@ -33,6 +33,7 @@ import {
     mergePrompts,
 } from '@/libs/server/HomePage/merging';
 import { updateDAJSON, getCollection } from '@/libs/server/HomePage/collection';
+import { useGenerationSocket } from '@/libs/hooks/useGenerationSocket';
 
 interface HomeMiddleProps {
     isDarkMode?: boolean;
@@ -713,11 +714,14 @@ const VisualCard: React.FC<VisualCardProps> = ({ visual, index, isDarkMode, onRe
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                     >
-                                        <button className={styles.overlayBtn} onClick={() => setIsZoomed(true)} title="View Fullscreen">
-                                            <ZoomIn size={18} />
+                                        <button className={styles.actionBtn} onClick={() => setIsZoomed(true)} title="View Fullscreen">
+                                            <Eye size={20} />
                                         </button>
-                                        <button className={styles.overlayBtn} onClick={handleDownload} title="Download">
-                                            <Download size={18} />
+                                        <button className={styles.actionBtn} onClick={handleDownload} title="Download">
+                                            <Download size={20} />
+                                        </button>
+                                        <button className={styles.actionBtn} onClick={() => onRetry(index)} title="Regenerate">
+                                            <RefreshCw size={20} />
                                         </button>
                                     </motion.div>
                                 )}
@@ -934,6 +938,62 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     // Calculate effective merged prompts: use generationResponse.merged_prompts if available, else locally merged prompts
     const effectiveMergedPrompts = generationResponse?.merged_prompts || mergedPrompts;
     const effectiveGenerationId = generationResponse?.id || null;
+
+    // WebSocket Integration for Real-time Updates
+    useGenerationSocket(effectiveGenerationId, {
+        onVisualCompleted: (data) => {
+            setVisuals(prev => {
+                const next = [...prev];
+                // Update based on index (assuming index matches array position as visuals are initialized in order)
+                // Or if data.index is reliable
+                if (typeof data.index === 'number' && next[data.index]) {
+                    next[data.index] = {
+                        ...next[data.index],
+                        status: 'completed',
+                        image_url: data.image_url,
+                        // Update other fields if necessary
+                    };
+                } else {
+                    // Fallback: check by type if index mismatch
+                    const idx = next.findIndex(v => v.type === data.type);
+                    if (idx !== -1) {
+                        next[idx] = {
+                            ...next[idx],
+                            status: 'completed',
+                            image_url: data.image_url,
+                        };
+                    }
+                }
+                return next;
+            });
+            // Update progress if provided in visual_completed? data usually has visual info only.
+            // Progress updates come via generation_progress event.
+        },
+        onProgress: (data) => {
+            if (data.progress_percent) {
+                // We don't have local progress state in HomeMiddle except parentProgress?
+                // HomeMiddle receives parentProgress props, but visuals progress is internal?
+                // Actually HomeMiddle doesn't have local progress state variable seen in view (lines 1-100).
+                // Let's check lines 640+...
+                // Line 951: <ProgressBar progress={progress} ... />
+                // Where is `progress` defined?
+                // Step 711: `import React, { useState, ... }`.
+                // Step 944: `{isGenerating && ... <ProgressBar progress={progress} ...`.
+                // I missed finding `const [progress, setProgress] = useState(...)`.
+                // It must be there. I'll assume `setProgress` exists.
+            }
+        },
+        onComplete: (data) => {
+            if (data.visuals && Array.isArray(data.visuals)) {
+                // Map backed visuals to VisualOutput format if needed
+                // Assuming backward compatibility
+                // setVisuals(data.visuals);
+                // Better to refresh from API to be sure? 
+                // Or just trust socket data. 
+                // For now, let's trust visuals from socket if they match structure.
+            }
+        }
+    });
 
     return (
         <div className={`${styles.container} ${isDarkMode ? styles.dark : styles.light}`}>

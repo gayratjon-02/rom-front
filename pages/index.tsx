@@ -23,6 +23,7 @@ import {
   executeGeneration,
   pollGenerationStatus,
 } from '@/libs/server/HomePage/generate';
+import { useGenerationSocket } from '@/libs/hooks/useGenerationSocket';
 
 // Mock DA Analysis for fallback
 const mockDAAnalysis: DAJSON = {
@@ -113,6 +114,39 @@ function Home() {
   const [progress, setProgress] = useState(0);
   // NEW: Store the full generation response from API
   const [generationResponse, setGenerationResponse] = useState<Generation | null>(null);
+
+  // WebSocket Integration
+  useGenerationSocket(generationResponse?.id || null, {
+    onVisualCompleted: (data) => {
+      setVisuals(prev => {
+        const next = [...prev];
+        // Try to find index by visual type or use data.index
+        // If data.index is reliable:
+        if (typeof data.index === 'number' && next[data.index]) {
+          next[data.index] = { ...next[data.index], ...data, status: 'completed' };
+        } else {
+          // Fallback to type matching
+          const idx = next.findIndex(v => v.type === data.type);
+          if (idx !== -1) {
+            next[idx] = { ...next[idx], ...data, status: 'completed' };
+          }
+        }
+        return next;
+      });
+    },
+    onProgress: (data) => {
+      // data.progress_percent, data.completed, data.total
+      if (data.progress_percent !== undefined) {
+        setProgress(data.progress_percent);
+      }
+    },
+    onComplete: (data) => {
+      if (data.visuals) setVisuals(data.visuals);
+      // setGenerationResponse? Might need to re-fetch to get consistent state
+      // But visuals update is the most important
+      setIsGenerating(false); // Ensure loader stops
+    }
+  });
 
   // ==================== HANDLERS ====================
 

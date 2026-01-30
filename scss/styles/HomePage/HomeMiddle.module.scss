@@ -900,6 +900,12 @@
 
     &:nth-child(3):hover {
         // Refresh - purple
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        color: #fff;
+    }
+
+    &:nth-child(3):hover {
+        // Refresh - purple
         background: linear-gradient(135deg, #8b5cf6, #6d28d9);
         color: #fff;
     }
