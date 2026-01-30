@@ -62,6 +62,7 @@ interface HomeMiddleProps {
     isGeneratingVisuals?: boolean;
     onReanalyze?: () => void;
     onSaveComplete?: () => void; // Called after save to trigger re-merge flow
+    libraryGeneration?: Generation | null;
 }
 
 export interface ProductJSON {
@@ -1050,8 +1051,8 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                                 />
                             ))}
                         </AnimatePresence>
-                        </div>
-                    </>
+                    </div>
+
                 )}
             </div>
 
@@ -1072,7 +1073,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

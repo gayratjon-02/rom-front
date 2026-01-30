@@ -39,6 +39,7 @@ interface HomeLeftProps {
   daJSON?: DAJSON | null;
   mergedPrompts?: Record<string, string>;
   onPromptsChange?: (key: string, value: string) => void;
+  onLibrarySelect?: (generation: Generation) => void;
 }
 
 const HomeLeft: React.FC<HomeLeftProps> = ({
