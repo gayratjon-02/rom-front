@@ -114,6 +114,122 @@ interface VisualOutput {
     error?: string;
 }
 
+// Editable Merged Prompts Component - Allows editing JSON before generation
+interface EditableMergedPromptsProps {
+    generationId: string;
+    mergedPrompts: any;
+    isDarkMode: boolean;
+    onPromptsUpdated?: (updatedPrompts: any) => void;
+}
+
+const EditableMergedPrompts: React.FC<EditableMergedPromptsProps> = ({
+    generationId,
+    mergedPrompts,
+    isDarkMode,
+    onPromptsUpdated
+}) => {
+    const [editedJson, setEditedJson] = useState<string>(JSON.stringify(mergedPrompts, null, 2));
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
+    // Update editedJson when mergedPrompts prop changes
+    useEffect(() => {
+        setEditedJson(JSON.stringify(mergedPrompts, null, 2));
+    }, [mergedPrompts]);
+
+    const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setEditedJson(e.target.value);
+        setIsEditing(true);
+        setSaveSuccess(false);
+        setSaveError(null);
+    };
+
+    const handleSave = async () => {
+        try {
+            // Validate JSON
+            const parsedJson = JSON.parse(editedJson);
+            setIsSaving(true);
+            setSaveError(null);
+
+            // Call API to update merged prompts
+            const response = await updatePromptsAPI(generationId, { prompts: parsedJson });
+            console.log('✅ Merged prompts updated:', response);
+
+            setSaveSuccess(true);
+            setIsEditing(false);
+
+            if (onPromptsUpdated && response.merged_prompts) {
+                onPromptsUpdated(response.merged_prompts);
+            }
+
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (error: any) {
+            console.error('Save failed:', error);
+            if (error instanceof SyntaxError) {
+                setSaveError('Invalid JSON format. Please check your syntax.');
+            } else {
+                setSaveError(error?.messages?.join(', ') || error?.message || 'Failed to save');
+            }
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <>
+            {/* Controls */}
+            <div className={styles.jsonControls}>
+                <div className={styles.jsonTabs}>
+                    <button className={`${styles.jsonTab} ${styles.active}`}>
+                        Merged Prompts (Editable)
+                    </button>
+                </div>
+                <div className={styles.editControls}>
+                    <button
+                        className={styles.saveBtn}
+                        onClick={handleSave}
+                        disabled={isSaving || !isEditing}
+                    >
+                        {isSaving ? (
+                            <Loader2 size={14} className={styles.spin} />
+                        ) : (
+                            <CheckCircle2 size={14} />
+                        )}
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Error/Success Messages */}
+            {saveError && (
+                <div className={styles.errorMessage}>
+                    <AlertCircle size={16} />
+                    {saveError}
+                </div>
+            )}
+            {saveSuccess && (
+                <div className={styles.successMessage}>
+                    <CheckCircle2 size={16} />
+                    Changes saved successfully!
+                </div>
+            )}
+
+            {/* Editable JSON */}
+            <div className={styles.jsonContainer}>
+                <textarea
+                    className={styles.jsonEditor}
+                    value={editedJson}
+                    onChange={handleJsonChange}
+                    spellCheck={false}
+                    placeholder="Edit merged prompts JSON here..."
+                />
+            </div>
+        </>
+    );
+};
+
 // Empty state for no visuals
 const EmptyState: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => (
     <motion.div
@@ -835,20 +951,16 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                             </div>
                         </div>
 
-                        {/* JSON Display */}
-                        <div className={styles.jsonControls}>
-                            <div className={styles.jsonTabs}>
-                                <button className={`${styles.jsonTab} ${styles.active}`}>
-                                    Generation Response
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className={styles.jsonContainer}>
-                            <pre className={styles.jsonContent}>
-                                {JSON.stringify(generationResponse, null, 2)}
-                            </pre>
-                        </div>
+                        {/* Editable JSON Display */}
+                        <EditableMergedPrompts
+                            generationId={generationResponse.id}
+                            mergedPrompts={generationResponse.merged_prompts}
+                            isDarkMode={isDarkMode}
+                            onPromptsUpdated={(updatedPrompts) => {
+                                // Update local reference if needed
+                                console.log('✅ Prompts updated:', updatedPrompts);
+                            }}
+                        />
 
                         {/* Confirm Button */}
                         <div className={styles.actionButtons}>
@@ -872,7 +984,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                         </div>
 
                         <div className={styles.nextStepHint}>
-                            <p>✨ Review the JSON above. Click "Confirm" to start image generation with Gemini AI.</p>
+                            <p>✨ Edit the JSON above if needed. Click "Confirm" to start image generation with Gemini AI.</p>
                         </div>
                     </motion.div>
                 ) : visuals.length === 0 ? (

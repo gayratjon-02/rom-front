@@ -172,6 +172,96 @@
     }
 }
 
+// 🆕 Shot Group - Wraps shot button with optional mini toggle
+.shotGroup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+// 🆕 Fixed Badge - For DUO "Father + Son"
+.fixedBadge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    margin-left: 4px;
+
+    .dark & {
+        background: rgba(34, 197, 94, 0.3);
+        color: #86efac;
+    }
+
+    .light & {
+        background: rgba(34, 197, 94, 0.15);
+        color: #16a34a;
+    }
+}
+
+// 🆕 Mini Toggle - Per-shot Adult/Kid toggle
+.miniToggle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 6px;
+
+    .dark & {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .light & {
+        background: rgba(0, 0, 0, 0.03);
+    }
+}
+
+// 🆕 Mini Button - Individual toggle option
+.miniBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    .dark & {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.4);
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        &.active {
+            background: rgba(99, 102, 241, 0.4);
+            color: #e0e7ff;
+        }
+    }
+
+    .light & {
+        background: transparent;
+        color: rgba(0, 0, 0, 0.3);
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        &.active {
+            background: rgba(99, 102, 241, 0.2);
+            color: #4f46e5;
+        }
+    }
+}
+
 // Center Section - Options (Model, Res, Ratio)
 .centerSection {
     display: flex;

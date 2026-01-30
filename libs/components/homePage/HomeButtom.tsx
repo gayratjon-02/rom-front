@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import styles from '@/scss/styles/HomePage/HomeBottom.module.scss';
 import {
     Users,
@@ -13,61 +13,84 @@ import {
     UserCheck,
     Check,
 } from 'lucide-react';
+import {
+    ShotOptions,
+    ShotOption,
+    SoloShotOption,
+    FlatlayOption,
+    createDefaultShotOptions,
+} from '@/libs/types/homepage/shot-options';
 
-export interface ShotType {
-    id: string;
+export interface ShotTypeConfig {
+    id: keyof ShotOptions;
     label: string;
     icon: React.ReactNode;
-    hasAgeToggle?: boolean; // For SOLO and FLAT shots
-    variants?: { id: string; label: string }[];
+    hasToggle: boolean;
+    toggleType?: 'subject' | 'size';
+    fixedLabel?: string; // For DUO: "Father + Son"
 }
 
 interface HomeBottomProps {
     isDarkMode?: boolean;
-    selectedShots: string[];
-    onShotsChange: (shots: string[]) => void;
-    ageMode: 'adult' | 'kid';
-    onAgeModeChange: (mode: 'adult' | 'kid') => void;
+    shotOptions: ShotOptions;
+    onShotOptionsChange: (options: ShotOptions) => void;
     resolution: '4k' | '2k';
     onResolutionChange: (res: '4k' | '2k') => void;
     aspectRatio: '4:5' | '1:1' | '9:16';
     onAspectRatioChange: (ratio: '4:5' | '1:1' | '9:16') => void;
-    onGenerate: (visualTypes: string[]) => void;
+    onGenerate: (shotOptions: ShotOptions) => void;
     isGenerating?: boolean;
-    isAnalyzed?: boolean; // Product analyzed?
-    hasDA?: boolean; // DA preset selected?
+    isAnalyzed?: boolean;
+    hasDA?: boolean;
 }
 
-const SHOT_TYPES: ShotType[] = [
-    { id: 'duo', label: 'DUO', icon: <Users size={18} /> },
+const SHOT_TYPE_CONFIGS: ShotTypeConfig[] = [
+    {
+        id: 'duo',
+        label: 'DUO',
+        icon: <Users size={18} />,
+        hasToggle: false,
+        fixedLabel: 'Father + Son',
+    },
     {
         id: 'solo',
         label: 'SOLO',
         icon: <User size={18} />,
-        hasAgeToggle: true,
+        hasToggle: true,
+        toggleType: 'subject',
     },
     {
         id: 'flatlay_front',
         label: 'FLAT F',
         icon: <Layout size={18} />,
-        hasAgeToggle: true,
+        hasToggle: true,
+        toggleType: 'size',
     },
     {
         id: 'flatlay_back',
         label: 'FLAT B',
         icon: <LayoutList size={18} />,
-        hasAgeToggle: true,
+        hasToggle: true,
+        toggleType: 'size',
     },
-    { id: 'closeup_front', label: 'CLOSE F', icon: <ZoomIn size={18} /> },
-    { id: 'closeup_back', label: 'CLOSE B', icon: <ZoomIn size={18} /> },
+    {
+        id: 'closeup_front',
+        label: 'CLOSE F',
+        icon: <ZoomIn size={18} />,
+        hasToggle: false,
+    },
+    {
+        id: 'closeup_back',
+        label: 'CLOSE B',
+        icon: <ZoomIn size={18} />,
+        hasToggle: false,
+    },
 ];
 
 const HomeBottom: React.FC<HomeBottomProps> = ({
     isDarkMode = true,
-    selectedShots,
-    onShotsChange,
-    ageMode,
-    onAgeModeChange,
+    shotOptions,
+    onShotOptionsChange,
     resolution,
     onResolutionChange,
     aspectRatio,
@@ -77,61 +100,116 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
     isAnalyzed = false,
     hasDA = false,
 }) => {
-    // Select all logic...
+    // Count enabled shots
+    const enabledCount = useMemo(() => {
+        return Object.values(shotOptions).filter((shot) => shot?.enabled).length;
+    }, [shotOptions]);
+
+    // Select all logic
     const handleSelectAll = useCallback(() => {
-        if (selectedShots.length === SHOT_TYPES.length) {
-            onShotsChange([]);
-        } else {
-            onShotsChange(SHOT_TYPES.map(s => s.id));
-        }
-    }, [selectedShots, onShotsChange]);
+        const allEnabled = enabledCount === SHOT_TYPE_CONFIGS.length;
+        const newOptions = { ...shotOptions };
 
-    const handleShotToggle = useCallback((shotId: string) => {
-        if (selectedShots.includes(shotId)) {
-            onShotsChange(selectedShots.filter(id => id !== shotId));
-        } else {
-            onShotsChange([...selectedShots, shotId]);
-        }
-    }, [selectedShots, onShotsChange]);
-
-    const handleGenerate = useCallback(() => {
-        if (selectedShots.length === 0) {
-            return;
-        }
-
-        // Add age suffix for shots that support it
-        const visualTypes = selectedShots.map(shotId => {
-            const shot = SHOT_TYPES.find(s => s.id === shotId);
-            if (shot?.hasAgeToggle) {
-                return `${shotId}_${ageMode}`;
+        SHOT_TYPE_CONFIGS.forEach((config) => {
+            const currentShot = shotOptions[config.id];
+            if (config.id === 'solo') {
+                (newOptions[config.id] as SoloShotOption) = {
+                    enabled: !allEnabled,
+                    subject: (currentShot as SoloShotOption)?.subject || 'adult',
+                };
+            } else if (config.id === 'flatlay_front' || config.id === 'flatlay_back') {
+                (newOptions[config.id] as FlatlayOption) = {
+                    enabled: !allEnabled,
+                    size: (currentShot as FlatlayOption)?.size || 'adult',
+                };
+            } else {
+                (newOptions[config.id] as ShotOption) = { enabled: !allEnabled };
             }
-            return shotId;
         });
 
-        // We assume resolution and aspect ratio are handled in global state or appended here if needed
-        // For now, simple console log or just passing visual types as before
-        onGenerate(visualTypes);
-    }, [selectedShots, ageMode, onGenerate]);
+        onShotOptionsChange(newOptions);
+    }, [enabledCount, shotOptions, onShotOptionsChange]);
+
+    // Toggle individual shot enabled/disabled
+    const handleShotToggle = useCallback(
+        (shotId: keyof ShotOptions) => {
+            const currentShot = shotOptions[shotId];
+            const isEnabled = currentShot?.enabled ?? false;
+            const newOptions = { ...shotOptions };
+
+            if (shotId === 'solo') {
+                (newOptions[shotId] as SoloShotOption) = {
+                    enabled: !isEnabled,
+                    subject: (currentShot as SoloShotOption)?.subject || 'adult',
+                };
+            } else if (shotId === 'flatlay_front' || shotId === 'flatlay_back') {
+                (newOptions[shotId] as FlatlayOption) = {
+                    enabled: !isEnabled,
+                    size: (currentShot as FlatlayOption)?.size || 'adult',
+                };
+            } else {
+                (newOptions[shotId] as ShotOption) = { enabled: !isEnabled };
+            }
+
+            onShotOptionsChange(newOptions);
+        },
+        [shotOptions, onShotOptionsChange]
+    );
+
+    // Toggle per-shot adult/kid setting
+    const handleShotModeToggle = useCallback(
+        (shotId: keyof ShotOptions, newValue: 'adult' | 'kid') => {
+            const newOptions = { ...shotOptions };
+            const currentShot = shotOptions[shotId];
+
+            if (shotId === 'solo') {
+                (newOptions[shotId] as SoloShotOption) = {
+                    enabled: currentShot?.enabled ?? true,
+                    subject: newValue,
+                };
+            } else if (shotId === 'flatlay_front' || shotId === 'flatlay_back') {
+                (newOptions[shotId] as FlatlayOption) = {
+                    enabled: currentShot?.enabled ?? true,
+                    size: newValue,
+                };
+            }
+
+            onShotOptionsChange(newOptions);
+        },
+        [shotOptions, onShotOptionsChange]
+    );
+
+    // Get current mode for a shot
+    const getShotMode = useCallback(
+        (shotId: keyof ShotOptions): 'adult' | 'kid' => {
+            const shot = shotOptions[shotId];
+            if (shotId === 'solo') {
+                return (shot as SoloShotOption)?.subject || 'adult';
+            } else if (shotId === 'flatlay_front' || shotId === 'flatlay_back') {
+                return (shot as FlatlayOption)?.size || 'adult';
+            }
+            return 'adult';
+        },
+        [shotOptions]
+    );
+
+    // Handle generate
+    const handleGenerate = useCallback(() => {
+        if (enabledCount === 0) return;
+        onGenerate(shotOptions);
+    }, [enabledCount, shotOptions, onGenerate]);
 
     const canGenerate = useMemo(() => {
-        return isAnalyzed && hasDA && selectedShots.length > 0 && !isGenerating;
-    }, [isAnalyzed, hasDA, selectedShots, isGenerating]);
+        return isAnalyzed && hasDA && enabledCount > 0 && !isGenerating;
+    }, [isAnalyzed, hasDA, enabledCount, isGenerating]);
 
     const generateButtonText = useMemo(() => {
         if (isGenerating) return 'Generating...';
         if (!isAnalyzed) return 'Upload Product First';
         if (!hasDA) return 'Select DA Preset';
-        if (selectedShots.length === 0) return 'Select Shots';
-        return `Generate x${selectedShots.length}`;
-    }, [isGenerating, isAnalyzed, hasDA, selectedShots.length]);
-
-    // Check if any selected shot has age toggle
-    const showAgeToggle = useMemo(() => {
-        return selectedShots.some(shotId => {
-            const shot = SHOT_TYPES.find(s => s.id === shotId);
-            return shot?.hasAgeToggle;
-        });
-    }, [selectedShots]);
+        if (enabledCount === 0) return 'Select Shots';
+        return `Generate x${enabledCount}`;
+    }, [isGenerating, isAnalyzed, hasDA, enabledCount]);
 
     return (
         <div className={`${styles.container} ${isDarkMode ? styles.dark : styles.light}`}>
@@ -139,7 +217,7 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
             <div className={styles.leftSection}>
                 {/* Select All Button */}
                 <button
-                    className={`${styles.selectAllBtn} ${selectedShots.length === SHOT_TYPES.length ? styles.active : ''}`}
+                    className={`${styles.selectAllBtn} ${enabledCount === SHOT_TYPE_CONFIGS.length ? styles.active : ''}`}
                     onClick={handleSelectAll}
                     title="Select All"
                 >
@@ -149,55 +227,60 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
 
                 <div className={styles.divider} />
 
-                {/* Shot Type Buttons */}
+                {/* Shot Type Buttons with Per-Shot Toggles */}
                 <div className={styles.shotTypes}>
-                    {SHOT_TYPES.map((shot) => (
-                        <button
-                            key={shot.id}
-                            className={`${styles.shotBtn} ${selectedShots.includes(shot.id) ? styles.active : ''}`}
-                            onClick={() => handleShotToggle(shot.id)}
-                        >
-                            {shot.icon}
-                            <span>{shot.label}</span>
-                            {shot.hasAgeToggle && selectedShots.includes(shot.id) && (
-                                <span className={styles.ageBadge}>
-                                    {ageMode === 'adult' ? 'A' : 'K'}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                    {SHOT_TYPE_CONFIGS.map((config) => {
+                        const isEnabled = shotOptions[config.id]?.enabled ?? false;
+                        const currentMode = getShotMode(config.id);
+
+                        return (
+                            <div key={config.id} className={styles.shotGroup}>
+                                {/* Main shot button */}
+                                <button
+                                    className={`${styles.shotBtn} ${isEnabled ? styles.active : ''}`}
+                                    onClick={() => handleShotToggle(config.id)}
+                                >
+                                    {config.icon}
+                                    <span>{config.label}</span>
+                                    {/* DUO: Show fixed badge */}
+                                    {config.fixedLabel && isEnabled && (
+                                        <span className={styles.fixedBadge}>F+S</span>
+                                    )}
+                                    {/* Shots with toggle: Show current mode badge */}
+                                    {config.hasToggle && isEnabled && (
+                                        <span className={styles.ageBadge}>
+                                            {currentMode === 'adult' ? 'A' : 'K'}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Per-shot Adult/Kid toggle (shown when enabled and has toggle) */}
+                                {config.hasToggle && isEnabled && (
+                                    <div className={styles.miniToggle}>
+                                        <button
+                                            className={`${styles.miniBtn} ${currentMode === 'adult' ? styles.active : ''}`}
+                                            onClick={() => handleShotModeToggle(config.id, 'adult')}
+                                            title={config.toggleType === 'subject' ? 'Adult Model' : 'Adult Size'}
+                                        >
+                                            <UserCheck size={12} />
+                                        </button>
+                                        <button
+                                            className={`${styles.miniBtn} ${currentMode === 'kid' ? styles.active : ''}`}
+                                            onClick={() => handleShotModeToggle(config.id, 'kid')}
+                                            title={config.toggleType === 'subject' ? 'Kid Model' : 'Kid Size'}
+                                        >
+                                            <Baby size={12} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Center Section: Options (Model, Resolution, Ratio) */}
+            {/* Center Section: Options (Resolution, Ratio) */}
             <div className={styles.centerSection}>
-
-                {/* Model / Age Toggle */}
-                {showAgeToggle && (
-                    <div className={styles.optionGroup}>
-                        <span className={styles.optionLabel}>Model:</span>
-                        <div className={styles.optionButtons}>
-                            <button
-                                className={`${styles.optionBtn} ${ageMode === 'adult' ? styles.active : ''}`}
-                                onClick={() => onAgeModeChange('adult')}
-                            >
-                                <UserCheck size={16} />
-                                <span>Adult</span>
-                            </button>
-                            <button
-                                className={`${styles.optionBtn} ${ageMode === 'kid' ? styles.active : ''}`}
-                                onClick={() => onAgeModeChange('kid')}
-                            >
-                                <Baby size={16} />
-                                <span>Kid</span>
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Divider if Model toggle is shown */}
-                {showAgeToggle && <div className={styles.dividerSmall} />}
-
                 {/* Resolution Toggle */}
                 <div className={styles.optionGroup}>
                     <span className={styles.optionLabel}>Res:</span>
@@ -243,7 +326,6 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
                         </button>
                     </div>
                 </div>
-
             </div>
 
             {/* Right Section: Generate Button */}
@@ -262,3 +344,6 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
 };
 
 export default HomeBottom;
+
+// Export helper for creating default options
+export { createDefaultShotOptions };

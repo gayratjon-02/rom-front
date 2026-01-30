@@ -56,6 +56,10 @@ export interface GenerateData {
 
 export interface MergePromptsData {
     custom_instructions?: string;
+    /** @deprecated Use shot_options instead */
+    model_type?: 'adult' | 'kid';
+    /** NEW: Per-shot control options */
+    shot_options?: import('./shot-options').ShotOptions;
 }
 
 export interface UpdateMergedPromptsData {
