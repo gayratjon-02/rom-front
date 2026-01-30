@@ -106,7 +106,7 @@ export async function getSettings(): Promise<UserSettings> {
  */
 export async function updateSettings(data: UpdateSettingsData): Promise<UserSettings> {
     try {
-        const response = await fetch(`${API_BASE}/users/updateSettings`, {
+        const response = await fetch(`${API_BASE}/users/updateUser`, {
             method: "POST",
             headers: getAuthHeaders(),
             body: JSON.stringify(data),
