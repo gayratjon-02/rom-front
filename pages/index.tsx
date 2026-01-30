@@ -99,7 +99,7 @@ function Home() {
 
   // NEW: Resolution & Aspect Ratio State
   const [resolution, setResolution] = useState<'4k' | '2k'>('4k');
-  const [aspectRatio, setAspectRatio] = useState<'4:5' | '1:1' | '9:16'>('4:5');
+  const [aspectRatio, setAspectRatio] = useState<'4:5' | '1:1' | '9:16' | '16:9'>('4:5');
 
   // Shot Selection - NEW: Use ShotOptions instead of selectedShots + ageMode
   const [shotOptions, setShotOptions] = useState<ShotOptions>(createDefaultShotOptions());
@@ -434,7 +434,9 @@ function Home() {
       const generation = await createGeneration({
         product_id: productId,
         collection_id: selectedCollection.id,
-        generation_type: 'product_visuals'
+        generation_type: 'product_visuals',
+        resolution: resolution === '4k' ? '4K' : '2K',
+        aspect_ratio: aspectRatio,
       });
 
       console.log('✅ Generation created:', generation.id);
@@ -442,7 +444,10 @@ function Home() {
       // Merge prompts immediately
       console.log('📝 Merging prompts with shot_options...');
       const { mergePrompts } = await import('@/libs/server/HomePage/merging');
-      await mergePrompts(generation.id, { shot_options: options });
+      await mergePrompts(generation.id, {
+        shot_options: options,
+        resolution: resolution === '4k' ? '4K' : '2K'
+      });
 
       // Fetch updated generation with merged prompts
       const { getGeneration } = await import('@/libs/server/HomePage/merging');
@@ -458,7 +463,7 @@ function Home() {
     } finally {
       setIsGenerating(false);
     }
-  }, [productId, selectedCollection, daJSON, mockDAAnalysis]);
+  }, [productId, selectedCollection, daJSON, mockDAAnalysis, resolution, aspectRatio]);
 
   // Step 2: Confirm button → Execute generation and start image creation
   const handleGenerateImages = useCallback(async () => {

@@ -38,6 +38,10 @@ export interface CreateGenerationData {
     product_id: string;
     collection_id: string;
     generation_type?: string;
+    /** "2K" | "4K" - used for prompt quality suffix and Gemini imageSize */
+    resolution?: string;
+    /** "1:1" | "4:5" | "9:16" | "16:9" - passed to Gemini config for output shape */
+    aspect_ratio?: string;
 }
 
 export interface UpdateGenerationData {
@@ -60,6 +64,7 @@ export interface MergePromptsData {
     model_type?: 'adult' | 'kid';
     /** NEW: Per-shot control options */
     shot_options?: import('./shot-options').ShotOptions;
+    resolution?: string;
 }
 
 export interface UpdateMergedPromptsData {

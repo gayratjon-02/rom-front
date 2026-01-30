@@ -36,8 +36,8 @@ interface HomeBottomProps {
     onShotOptionsChange: (options: ShotOptions) => void;
     resolution: '4k' | '2k';
     onResolutionChange: (res: '4k' | '2k') => void;
-    aspectRatio: '4:5' | '1:1' | '9:16';
-    onAspectRatioChange: (ratio: '4:5' | '1:1' | '9:16') => void;
+    aspectRatio: '4:5' | '1:1' | '9:16' | '16:9';
+    onAspectRatioChange: (ratio: '4:5' | '1:1' | '9:16' | '16:9') => void;
     onGenerate: (shotOptions: ShotOptions) => void;
     isGenerating?: boolean;
     isAnalyzed?: boolean;
@@ -323,6 +323,12 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
                             onClick={() => onAspectRatioChange('9:16')}
                         >
                             <span>9:16</span>
+                        </button>
+                        <button
+                            className={`${styles.optionBtn} ${aspectRatio === '16:9' ? styles.active : ''}`}
+                            onClick={() => onAspectRatioChange('16:9')}
+                        >
+                            <span>16:9</span>
                         </button>
                     </div>
                 </div>
