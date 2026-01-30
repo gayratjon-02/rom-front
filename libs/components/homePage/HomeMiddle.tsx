@@ -844,13 +844,32 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     const [isDownloading, setIsDownloading] = useState(false);
 
     // Library view: use visuals from libraryGeneration when viewing a Library item
-    const libraryVisuals = libraryGeneration?.visuals ?? libraryGeneration?.visual_outputs ?? [];
-    const isLibraryView = !!libraryGeneration && Array.isArray(libraryVisuals) && libraryVisuals.length > 0;
+    const isLibraryView = !!libraryGeneration;
 
-    // Use parent visuals/progress if provided (or library visuals in library view)
-    const visuals = isLibraryView ? libraryVisuals : (parentVisuals || localVisuals);
+    // Sync library visuals to local state when library generation changes
+    useEffect(() => {
+        if (libraryGeneration) {
+            const libVisuals = libraryGeneration.visuals || libraryGeneration.visual_outputs || [];
+            setLocalVisuals(libVisuals);
+        } else if (!parentVisuals) {
+            // Clear local visuals if not in library mode and not using parent visuals (e.g. fresh state)
+            // But be careful not to clear if we are in local generation mode
+        }
+    }, [libraryGeneration]);
+
+    // Use parent visuals/progress if provided (or local visuals which now hold library visuals too)
+    // If parentVisuals is provided, it takes precedence (active generation flow via socket)
+    // Otherwise rely on localVisuals (which is either local generation or synced library visuals)
+    const visuals = parentVisuals || localVisuals;
+
+    // Progress follows similar pattern
     const progress = parentProgress ?? localProgress;
+
+    // IsGenerating: allow local state override
     const isGenerating = isGeneratingVisuals || localIsGenerating;
+
+    // Setters: if using parent state, these are no-ops effectively (or we could warn)
+    // For library view (parentVisuals is undefined), we use setLocalVisuals
     const setVisuals = parentVisuals ? () => { } : setLocalVisuals;
     const setProgress = parentProgress !== undefined ? () => { } : setLocalProgress;
     const setIsGenerating = isGeneratingVisuals !== undefined ? () => { } : setLocalIsGenerating;
@@ -883,20 +902,33 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
     // Use passed DA or fetched DA
     const activeDA = daJSON || collectionDA;
 
+    // Calculate effective merged prompts: use generationResponse.merged_prompts if available, else locally merged prompts
+    const effectiveMergedPrompts = generationResponse?.merged_prompts || mergedPrompts;
+    // In library view use libraryGeneration.id for download; otherwise current generation
+    const effectiveGenerationId = isLibraryView ? (libraryGeneration?.id ?? null) : (generationResponse?.id || null);
+
     const handleRetry = useCallback(async (index: number) => {
-        if (!generationId) return;
+        const targetGenId = effectiveGenerationId;
+        if (!targetGenId) return;
 
         try {
             setVisuals(prev => prev.map((v, i) =>
                 i === index ? { ...v, status: 'processing' } : v
             ));
 
-            await retryFailedVisual(generationId, index);
+            await retryFailedVisual(targetGenId, index);
 
             const pollRetry = setInterval(async () => {
                 try {
-                    const status = await pollGenerationStatus(generationId);
-                    setVisuals(status.visuals);
+                    const status = await pollGenerationStatus(targetGenId);
+                    // Only update the specific visual being retried to avoid jitter
+                    setVisuals(prev => {
+                        const next = [...prev];
+                        if (status.visuals[index]) {
+                            next[index] = status.visuals[index];
+                        }
+                        return next;
+                    });
 
                     if (status.visuals[index]?.status === 'completed' ||
                         status.visuals[index]?.status === 'failed') {
@@ -914,7 +946,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                 i === index ? { ...v, status: 'failed' } : v
             ));
         }
-    }, [generationId]);
+    }, [effectiveGenerationId]);
 
     // Handle single image download
     const handleSingleDownload = useCallback(async (imageUrl: string, type: string) => {
@@ -942,11 +974,6 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
         visuals.every(v => v.status === 'completed' || v.status === 'failed');
 
     const completedCount = visuals.filter(v => v.status === 'completed').length;
-
-    // Calculate effective merged prompts: use generationResponse.merged_prompts if available, else locally merged prompts
-    const effectiveMergedPrompts = generationResponse?.merged_prompts || mergedPrompts;
-    // In library view use libraryGeneration.id for download; otherwise current generation
-    const effectiveGenerationId = isLibraryView ? (libraryGeneration?.id ?? null) : (generationResponse?.id || null);
 
     const handleDownloadAll = async () => {
         if (!effectiveGenerationId) return;
