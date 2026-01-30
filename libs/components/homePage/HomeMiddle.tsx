@@ -273,6 +273,12 @@ interface AnalyzedStateProps {
     collectionId?: string;
     onAnalysisUpdate?: (updatedResponse: any) => void;
     onDAUpdate?: (updatedDA: DAJSON) => void;
+    // NEW: For unified editing
+    mergedPrompts?: any;
+    generationId?: string | null;
+    onPromptsUpdated?: (updatedPrompts: any) => void;
+    isGenerating?: boolean;
+    onConfirmGeneration?: () => void;
 }
 
 const AnalyzedState: React.FC<AnalyzedStateProps> = ({
@@ -283,9 +289,15 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
     productId,
     collectionId,
     onAnalysisUpdate,
-    onDAUpdate
+    onDAUpdate,
+    // NEW props for unified editing
+    mergedPrompts,
+    generationId,
+    onPromptsUpdated,
+    isGenerating,
+    onConfirmGeneration
 }) => {
-    const [activeTab, setActiveTab] = useState<'analysis' | 'da'>('analysis');
+    const [activeTab, setActiveTab] = useState<'analysis' | 'da' | 'merged'>('analysis');
     const [isEditing, setIsEditing] = useState(false);
     const [editedJson, setEditedJson] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
@@ -310,9 +322,11 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
             return displayResponse.analysis;
         } else if (activeTab === 'da' && daJSON) {
             return daJSON;
+        } else if (activeTab === 'merged' && mergedPrompts) {
+            return mergedPrompts;
         }
         return displayResponse;
-    }, [activeTab, displayResponse, daJSON]);
+    }, [activeTab, displayResponse, daJSON, mergedPrompts]);
 
     // Update editedJson when tab or data changes
     useEffect(() => {
@@ -373,6 +387,15 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
                 if (onDAUpdate && response.analyzed_da_json) {
                     onDAUpdate(response.analyzed_da_json as DAJSON);
                 }
+            } else if (activeTab === 'merged' && generationId) {
+                // Update Merged Prompts
+                const { updateMergedPrompts } = await import('@/libs/server/HomePage/merging');
+                const response = await updateMergedPrompts(generationId, { prompts: parsedJson });
+                console.log('✅ Merged prompts updated:', response);
+
+                if (onPromptsUpdated && response.merged_prompts) {
+                    onPromptsUpdated(response.merged_prompts);
+                }
             }
 
             setSaveSuccess(true);
@@ -423,7 +446,7 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
 
         } catch (error: any) {
             console.error('Reset failed:', error);
-            setSaveError(error?.messages?.join(', ') || error?.message || 'Failed to reset');
+            setSaveError(error?.message || 'Failed to reset');
         } finally {
             setIsSaving(false);
         }
@@ -438,7 +461,7 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
         >
             <div className={styles.analyzedHeader}>
                 <CheckCircle2 size={24} className={styles.successIcon} />
-                <h2>Product Analyzed Successfully</h2>
+                <h2>{mergedPrompts ? 'Generation Created Successfully' : 'Product Analyzed Successfully'}</h2>
             </div>
 
             {/* Product Images Preview */}
@@ -494,31 +517,37 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
                             DA JSON
                         </button>
                     )}
+                    {mergedPrompts && (
+                        <button
+                            className={`${styles.jsonTab} ${activeTab === 'merged' ? styles.active : ''}`}
+                            onClick={() => { setActiveTab('merged'); setIsEditing(false); }}
+                        >
+                            Merged Prompts (Editable)
+                        </button>
+                    )}
                 </div>
 
-                {/* Edit/Save/Reset Buttons - Show for both analysis and DA tabs */}
-                {((activeTab === 'analysis' && productId) || (activeTab === 'da' && collectionId)) && (
-                    <div className={styles.editControls}>
-                        <button
-                            className={styles.saveBtn}
-                            onClick={handleSave}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? (
-                                <Loader2 size={14} className={styles.spin} />
-                            ) : (
-                                <CheckCircle2 size={14} />
-                            )}
-                            {isSaving ? 'Saving...' : 'Save'}
-                        </button>
-                        {activeTab === 'analysis' && (
-                            <button className={styles.resetBtn} onClick={handleReset} disabled={isSaving}>
-                                <RefreshCw size={14} className={isSaving ? styles.spin : ''} />
-                                Reset
-                            </button>
+                {/* Edit/Save/Reset Buttons */}
+                <div className={styles.editControls}>
+                    <button
+                        className={styles.saveBtn}
+                        onClick={handleSave}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? (
+                            <Loader2 size={14} className={styles.spin} />
+                        ) : (
+                            <CheckCircle2 size={14} />
                         )}
-                    </div>
-                )}
+                        {isSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    {activeTab === 'analysis' && (
+                        <button className={styles.resetBtn} onClick={handleReset} disabled={isSaving}>
+                            <RefreshCw size={14} className={isSaving ? styles.spin : ''} />
+                            Reset
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Error/Success Messages */}
@@ -545,8 +574,34 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
                 />
             </div>
 
+            {/* Confirm Generation Button (Only when merged prompts exist) */}
+            {mergedPrompts && onConfirmGeneration && (
+                <div className={styles.actionButtons}>
+                    <button
+                        className={styles.confirmBtn}
+                        onClick={onConfirmGeneration}
+                        disabled={isGenerating}
+                    >
+                        {isGenerating ? (
+                            <>
+                                <Loader2 size={18} className={styles.spin} />
+                                <span>Generating Images...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Play size={18} />
+                                <span>Confirm & Generate Images</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
+
             <div className={styles.nextStepHint}>
-                <p>✨ Select a DA Preset and click Generate to create visuals</p>
+                {mergedPrompts
+                    ? <p>✨ Edit the JSON above if needed. Click "Confirm" to start image generation with Gemini AI.</p>
+                    : <p>✨ Select a DA Preset and click Generate to create visuals</p>
+                }
             </div>
         </motion.div>
     );
@@ -614,63 +669,49 @@ const VisualCard: React.FC<VisualCardProps> = ({ visual, index, isDarkMode, onRe
                                 src={visual.image_url}
                                 alt={visual.type}
                                 className={styles.visualImage}
+                                onClick={() => setIsZoomed(true)}
                             />
-                            {isHovered && (
-                                <div className={styles.visualOverlay}>
-                                    {/* View Button */}
-                                    <button
-                                        className={styles.actionBtn}
-                                        onClick={() => setIsZoomed(true)}
-                                        title="View"
+                            {/* Actions Overlay */}
+                            <AnimatePresence>
+                                {isHovered && (
+                                    <motion.div
+                                        className={styles.visualOverlay}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
                                     >
-                                        <Eye size={20} />
-                                    </button>
-                                    {/* Download Button */}
-                                    <button
-                                        className={styles.actionBtn}
-                                        onClick={handleDownload}
-                                        title="Download"
-                                    >
-                                        <Download size={20} />
-                                    </button>
-                                    {/* Refresh/Regenerate Button */}
-                                    <button
-                                        className={styles.actionBtn}
-                                        onClick={() => onRetry(index)}
-                                        title="Regenerate"
-                                    >
-                                        <RefreshCw size={20} />
+                                        <button className={styles.overlayBtn} onClick={() => setIsZoomed(true)} title="View Fullscreen">
+                                            <ZoomIn size={18} />
+                                        </button>
+                                        <button className={styles.overlayBtn} onClick={handleDownload} title="Download">
+                                            <Download size={18} />
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </>
+                    ) : (
+                        <div className={styles.processingState}>
+                            {visual.status === 'failed' ? (
+                                <div className={styles.failedState}>
+                                    <AlertCircle size={32} className={styles.errorIcon} />
+                                    <p>Generation Failed</p>
+                                    <button className={styles.retryBtn} onClick={() => onRetry(index)}>
+                                        <RefreshCw size={14} /> Retry
                                     </button>
                                 </div>
+                            ) : (
+                                <div className={styles.loadingState}>
+                                    <Loader2 size={32} className={styles.spin} />
+                                    <p>{visual.status === 'processing' ? 'Generating...' : 'Pending'}</p>
+                                </div>
                             )}
-                        </>
-                    ) : visual.status === 'processing' ? (
-                        <div className={styles.loadingState}>
-                            <Loader2 size={32} className={styles.spin} />
-                            <span>Generating...</span>
-                        </div>
-                    ) : visual.status === 'failed' ? (
-                        <div className={styles.errorState}>
-                            <AlertCircle size={32} />
-                            <span>{visual.error || 'Generation failed'}</span>
-                            <button
-                                className={styles.retryBtn}
-                                onClick={() => onRetry(index)}
-                            >
-                                <RefreshCw size={14} />
-                                Retry
-                            </button>
-                        </div>
-                    ) : (
-                        <div className={styles.pendingState}>
-                            <ImageIcon size={32} />
-                            <span>Waiting...</span>
                         </div>
                     )}
                 </div>
             </motion.div>
 
-            {/* Zoom Modal */}
+            {/* Image Zoom Modal */}
             <AnimatePresence>
                 {isZoomed && visual.image_url && (
                     <motion.div
@@ -683,10 +724,15 @@ const VisualCard: React.FC<VisualCardProps> = ({ visual, index, isDarkMode, onRe
                         <motion.img
                             src={visual.image_url}
                             alt={visual.type}
-                            initial={{ scale: 0.8 }}
+                            className={styles.zoomedImage}
+                            initial={{ scale: 0.9 }}
                             animate={{ scale: 1 }}
-                            exit={{ scale: 0.8 }}
+                            exit={{ scale: 0.9 }}
+                            onClick={(e) => e.stopPropagation()}
                         />
+                        <button className={styles.closeZoomFn} onClick={() => setIsZoomed(false)}>
+                            <Plus size={24} style={{ transform: 'rotate(45deg)' }} />
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -850,6 +896,10 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
 
     const completedCount = visuals.filter(v => v.status === 'completed').length;
 
+    // Calculate effective merged prompts: use generationResponse.merged_prompts if available, else locally merged prompts
+    const effectiveMergedPrompts = generationResponse?.merged_prompts || mergedPrompts;
+    const effectiveGenerationId = generationResponse?.id || null;
+
     return (
         <div className={`${styles.container} ${isDarkMode ? styles.dark : styles.light}`}>
             {/* Header with Progress */}
@@ -893,71 +943,7 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
 
             {/* Main Content */}
             <div className={styles.content}>
-                {/* Show Generation Response when available */}
-                {generationResponse ? (
-                    <motion.div
-                        className={styles.analyzedState}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                    >
-                        <div className={styles.analyzedHeader}>
-                            <CheckCircle2 size={24} className={styles.successIcon} />
-                            <h2>Generation Created Successfully</h2>
-                        </div>
-
-                        {/* Generation Info */}
-                        <div className={styles.infoBar}>
-                            <div className={styles.infoItem}>
-                                <span className={styles.label}>ID:</span>
-                                <span className={styles.value}>{generationResponse.id}</span>
-                            </div>
-                            <div className={styles.infoItem}>
-                                <span className={styles.label}>STATUS:</span>
-                                <span className={styles.value}>{generationResponse.status}</span>
-                            </div>
-                            <div className={styles.infoItem}>
-                                <span className={styles.label}>TYPE:</span>
-                                <span className={styles.value}>{generationResponse.generation_type}</span>
-                            </div>
-                        </div>
-
-                        {/* Editable JSON Display */}
-                        <EditableMergedPrompts
-                            generationId={generationResponse.id}
-                            mergedPrompts={generationResponse.merged_prompts}
-                            isDarkMode={isDarkMode}
-                            onPromptsUpdated={(updatedPrompts) => {
-                                // Update local reference if needed
-                                console.log('✅ Prompts updated:', updatedPrompts);
-                            }}
-                        />
-
-                        {/* Confirm Button */}
-                        <div className={styles.actionButtons}>
-                            <button
-                                className={styles.confirmBtn}
-                                onClick={onConfirmGeneration}
-                                disabled={isGenerating || !onConfirmGeneration}
-                            >
-                                {isGenerating ? (
-                                    <>
-                                        <Loader2 size={18} className={styles.spin} />
-                                        <span>Generating Images...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play size={18} />
-                                        <span>Confirm & Generate Images</span>
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        <div className={styles.nextStepHint}>
-                            <p>✨ Edit the JSON above if needed. Click "Confirm" to start image generation with Gemini AI.</p>
-                        </div>
-                    </motion.div>
-                ) : visuals.length === 0 ? (
+                {visuals.length === 0 ? (
                     // Show AnalyzedState if product has been analyzed, otherwise show EmptyState
                     productJSON ? (
                         <AnalyzedState
@@ -969,6 +955,11 @@ const HomeMiddle: React.FC<HomeMiddleProps> = ({
                             collectionId={selectedCollection?.id}
                             onAnalysisUpdate={onAnalysisUpdate}
                             onDAUpdate={onDAUpdate}
+                            // Pass merged prompts info
+                            mergedPrompts={effectiveMergedPrompts}
+                            generationId={effectiveGenerationId}
+                            onConfirmGeneration={onConfirmGeneration}
+                            isGenerating={isGeneratingVisuals}
                         />
                     ) : (
                         <EmptyState isDarkMode={isDarkMode} />
