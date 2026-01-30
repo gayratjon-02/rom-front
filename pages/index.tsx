@@ -115,36 +115,70 @@ function Home() {
   // NEW: Store the full generation response from API
   const [generationResponse, setGenerationResponse] = useState<Generation | null>(null);
 
-  // WebSocket Integration
-  useGenerationSocket(generationResponse?.id || null, {
+  // WebSocket Integration - Real-time image updates
+  const { isConnected: socketConnected } = useGenerationSocket(generationResponse?.id || null, {
     onVisualCompleted: (data) => {
+      console.log('🎨 [Index] Visual completed received:', {
+        type: data.type,
+        index: data.index,
+        status: data.status,
+        hasImage: !!data.image_url,
+      });
+
       setVisuals(prev => {
         const next = [...prev];
-        // Try to find index by visual type or use data.index
-        // If data.index is reliable:
-        if (typeof data.index === 'number' && next[data.index]) {
-          next[data.index] = { ...next[data.index], ...data, status: 'completed' };
-        } else {
-          // Fallback to type matching
-          const idx = next.findIndex(v => v.type === data.type);
-          if (idx !== -1) {
-            next[idx] = { ...next[idx], ...data, status: 'completed' };
-          }
+
+        // Find the visual to update - prefer index match, fallback to type match
+        let targetIndex = -1;
+
+        // Method 1: Direct index match
+        if (typeof data.index === 'number' && data.index >= 0 && data.index < next.length) {
+          targetIndex = data.index;
         }
+
+        // Method 2: Type matching fallback
+        if (targetIndex === -1 && data.type) {
+          targetIndex = next.findIndex(v => v.type === data.type);
+        }
+
+        // Update the visual if found
+        if (targetIndex !== -1) {
+          next[targetIndex] = {
+            ...next[targetIndex],
+            ...data,
+            status: data.status || 'completed',
+          };
+          console.log('✅ [Index] Updated visual at index', targetIndex, 'type:', data.type);
+        } else {
+          // Visual not found in placeholder array - add it
+          console.log('⚠️ [Index] Visual not found, appending:', data.type);
+          next.push({
+            ...data,
+            status: data.status || 'completed',
+          });
+        }
+
         return next;
       });
     },
     onProgress: (data) => {
-      // data.progress_percent, data.completed, data.total
       if (data.progress_percent !== undefined) {
         setProgress(data.progress_percent);
       }
     },
     onComplete: (data) => {
-      if (data.visuals) setVisuals(data.visuals);
-      // setGenerationResponse? Might need to re-fetch to get consistent state
-      // But visuals update is the most important
-      setIsGenerating(false); // Ensure loader stops
+      console.log('🏁 [Index] Generation complete:', data.status, `${data.completed}/${data.total}`);
+      if (data.visuals && data.visuals.length > 0) {
+        setVisuals(data.visuals);
+      }
+      setIsGenerating(false);
+      setProgress(100);
+    },
+    onConnected: () => {
+      console.log('🔌 [Index] Socket connected for generation:', generationResponse?.id);
+    },
+    onError: (error) => {
+      console.error('❌ [Index] Socket error:', error.message);
     }
   });
 
