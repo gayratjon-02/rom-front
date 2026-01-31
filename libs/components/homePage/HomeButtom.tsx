@@ -220,7 +220,7 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
         if (!isAnalyzed) return 'Upload Product First';
         if (!hasDA) return 'Select DA Preset';
         if (enabledCount === 0) return 'Select Shots';
-        return `Generate x${enabledCount}`;
+        return `Merge Prompts`;
     }, [isGenerating, isAnalyzed, hasDA, enabledCount]);
 
     return (
