@@ -622,7 +622,7 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
                 </div>
             )}
 
-            {/* Merge Button (When DA selected but NOT merged yet) */}
+            {/* Merge Button - MOVED TO BOTTOM BAR
             {daJSON && !hasMergedPrompts && onMerge && (
                 <div className={styles.actionButtons}>
                     <button
@@ -645,6 +645,7 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
                     </button>
                 </div>
             )}
+            */}
         </motion.div>
     );
 };
