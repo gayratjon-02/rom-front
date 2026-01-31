@@ -462,6 +462,10 @@ function Home() {
 
       // Merge prompts immediately
       console.log('📝 Merging prompts with shot_options...');
+      console.log('🔍 DEBUG FRONTEND - options being sent:', JSON.stringify(options));
+      console.log('🔍 DEBUG FRONTEND - solo option:', JSON.stringify(options.solo));
+      console.log('🔍 DEBUG FRONTEND - solo.subject:', options.solo?.subject);
+
       const { mergePrompts } = await import('@/libs/server/HomePage/merging');
       await mergePrompts(generation.id, {
         shot_options: options,
