@@ -55,41 +55,41 @@ const SHOT_TYPE_CONFIGS: ShotTypeConfig[] = [
     {
         id: 'duo',
         label: 'DUO',
-        icon: <Users size={18} />,
+        icon: <Users size={16} />,
         hasToggle: false,
         fixedLabel: 'Father + Son',
     },
     {
         id: 'solo',
         label: 'SOLO',
-        icon: <User size={18} />,
+        icon: <User size={16} />,
         hasToggle: true,
         toggleType: 'subject',
     },
     {
         id: 'flatlay_front',
         label: 'FLAT F',
-        icon: <Layout size={18} />,
+        icon: <Layout size={16} />,
         hasToggle: true,
         toggleType: 'size',
     },
     {
         id: 'flatlay_back',
         label: 'FLAT B',
-        icon: <LayoutList size={18} />,
+        icon: <LayoutList size={16} />,
         hasToggle: true,
         toggleType: 'size',
     },
     {
         id: 'closeup_front',
         label: 'CLOSE F',
-        icon: <ZoomIn size={18} />,
+        icon: <ZoomIn size={16} />,
         hasToggle: false,
     },
     {
         id: 'closeup_back',
         label: 'CLOSE B',
-        icon: <ZoomIn size={18} />,
+        icon: <ZoomIn size={16} />,
         hasToggle: false,
     },
 ];
@@ -358,12 +358,12 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
                     >
                         {isGeneratingImages ? (
                             <>
-                                <Loader2 size={18} className={styles.spin} />
+                                <Loader2 size={16} className={styles.spin} />
                                 <span>Generating... {Math.round(generatingProgress)}%</span>
                             </>
                         ) : (
                             <>
-                                <Play size={18} />
+                                <Play size={16} />
                                 <span>Generate Images</span>
                             </>
                         )}
@@ -375,7 +375,7 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
                     onClick={handleGenerate}
                     disabled={!canGenerate}
                 >
-                    <Sparkles size={18} />
+                    <Sparkles size={16} />
                     <span>{generateButtonText}</span>
                 </button>
             </div>
