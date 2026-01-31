@@ -599,7 +599,7 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
                 </div>
             </div>
 
-            {/* Confirm Generation Button (Only when merged prompts exist) */}
+            {/* Confirm Generation Button - MOVED TO BOTTOM BAR
             {hasMergedPrompts && onConfirmGeneration && (
                 <div className={styles.actionButtons}>
                     <button
@@ -621,6 +621,7 @@ const AnalyzedState: React.FC<AnalyzedStateProps> = ({
                     </button>
                 </div>
             )}
+            */}
 
             {/* Merge Button - MOVED TO BOTTOM BAR
             {daJSON && !hasMergedPrompts && onMerge && (

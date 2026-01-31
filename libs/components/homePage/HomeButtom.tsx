@@ -12,6 +12,8 @@ import {
     Baby,
     UserCheck,
     Check,
+    Play,
+    Loader2,
 } from 'lucide-react';
 import {
     ShotOptions,
@@ -42,6 +44,11 @@ interface HomeBottomProps {
     isGenerating?: boolean;
     isAnalyzed?: boolean;
     hasDA?: boolean;
+    // NEW: Props for Generate Images button
+    hasMergedPrompts?: boolean;
+    onGenerateImages?: () => void;
+    isGeneratingImages?: boolean;
+    generatingProgress?: number;
 }
 
 const SHOT_TYPE_CONFIGS: ShotTypeConfig[] = [
@@ -99,6 +106,11 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
     isGenerating = false,
     isAnalyzed = false,
     hasDA = false,
+    // NEW: Generate Images props
+    hasMergedPrompts = false,
+    onGenerateImages,
+    isGeneratingImages = false,
+    generatingProgress = 0,
 }) => {
     // Count enabled shots
     const enabledCount = useMemo(() => {
@@ -336,6 +348,28 @@ const HomeBottom: React.FC<HomeBottomProps> = ({
 
             {/* Right Section: Generate Button */}
             <div className={styles.rightSection}>
+                {/* Generate Images Button (Only when merged prompts exist) */}
+                {hasMergedPrompts && onGenerateImages && (
+                    <button
+                        className={`${styles.generateBtn} ${styles.ready}`}
+                        onClick={onGenerateImages}
+                        disabled={isGeneratingImages}
+                        style={{ marginRight: '12px', background: '#8b5cf6' }} // Distinct color
+                    >
+                        {isGeneratingImages ? (
+                            <>
+                                <Loader2 size={18} className={styles.spin} />
+                                <span>Generating... {Math.round(generatingProgress)}%</span>
+                            </>
+                        ) : (
+                            <>
+                                <Play size={18} />
+                                <span>Generate Images</span>
+                            </>
+                        )}
+                    </button>
+                )}
+
                 <button
                     className={`${styles.generateBtn} ${canGenerate ? styles.ready : styles.disabled}`}
                     onClick={handleGenerate}

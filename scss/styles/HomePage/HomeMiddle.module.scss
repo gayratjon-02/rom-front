@@ -263,15 +263,16 @@
     }
 }
 
-// Analyzed State - JSON Display
+// Analyzed State - JSON Display (Enhanced for readability)
 .analyzedState {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 900px;
+    max-width: 1200px; // Increased from 900px for wider display
     margin: 0 auto;
-    padding: 32px;
+    padding: 24px;
+    height: 100%;
 }
 
 .analyzedHeader {
@@ -342,55 +343,66 @@
 
 .jsonContainer {
     width: 100%;
-    max-height: calc(100vh - 350px); // Increased - takes most of viewport
-    min-height: 500px;
+    flex: 1; // Take available space
+    max-height: calc(100vh - 280px); // More space for JSON viewing
+    min-height: 450px;
     overflow: auto;
     border-radius: 12px;
     border: 1px solid;
 
     .dark & {
-        background: rgba(10, 10, 20, 0.6);
-        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(10, 10, 20, 0.8);
+        border-color: rgba(255, 255, 255, 0.12);
     }
 
     .light & {
-        background: rgba(248, 250, 252, 0.9);
-        border-color: rgba(0, 0, 0, 0.08);
+        background: rgba(248, 250, 252, 0.95);
+        border-color: rgba(0, 0, 0, 0.1);
     }
 
     &::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
     }
 
     &::-webkit-scrollbar-track {
         background: transparent;
+        margin: 4px;
     }
 
     &::-webkit-scrollbar-thumb {
-        border-radius: 4px;
+        border-radius: 6px;
 
         .dark & {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.2);
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
         }
 
         .light & {
-            background: rgba(0, 0, 0, 0.15);
+            background: rgba(0, 0, 0, 0.2);
+
+            &:hover {
+                background: rgba(0, 0, 0, 0.3);
+            }
         }
     }
 }
 
 .jsonContent {
-    padding: 20px;
+    padding: 24px;
     margin: 0;
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: 14px; // Increased from 13px for better readability
+    line-height: 1.7; // Increased line height
     white-space: pre-wrap;
     word-break: break-word;
+    letter-spacing: 0.3px;
 
     .dark & {
-        color: #a5b4fc;
+        color: #c4b5fd; // Brighter purple for better contrast
     }
 
     .light & {
@@ -745,18 +757,41 @@
 
 .jsonEditor {
     width: 100%;
-    min-height: 500px; // Increased from 300px
-    padding: 20px;
+    min-height: 450px;
+    height: 100%; // Fill available space
+    padding: 24px;
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: 14px; // Increased for readability
+    line-height: 1.7;
+    letter-spacing: 0.3px;
     border: none;
     outline: none;
-    resize: vertical;
+    resize: none; // Disable resize since container handles sizing
     background: transparent;
+    tab-size: 2; // Better indentation
 
-    .dark & { color: #a5b4fc; }
-    .light & { color: #4338ca; }
+    .dark & {
+        color: #c4b5fd; // Brighter for contrast
+        caret-color: #8b5cf6; // Visible cursor
+    }
+    .light & {
+        color: #4338ca;
+        caret-color: #6366f1;
+    }
+
+    &::placeholder {
+        .dark & { color: rgba(255, 255, 255, 0.3); }
+        .light & { color: rgba(0, 0, 0, 0.3); }
+    }
+
+    &:focus {
+        .dark & {
+            background: rgba(139, 92, 246, 0.05);
+        }
+        .light & {
+            background: rgba(99, 102, 241, 0.03);
+        }
+    }
 }
 
 // Visuals Grid
@@ -1101,9 +1136,26 @@
 }
 
 // Responsive
+@media (max-width: 1400px) {
+    .analyzedState {
+        max-width: 1000px;
+        padding: 20px;
+    }
+}
+
 @media (max-width: 1200px) {
     .visualsGrid {
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+
+    .analyzedState {
+        max-width: 100%;
+        padding: 16px;
+    }
+
+    .jsonContainer {
+        max-height: calc(100vh - 320px);
+        min-height: 400px;
     }
 }
 
@@ -1130,5 +1182,43 @@
 
     .progressContainer {
         width: 100%;
+    }
+
+    .analyzedState {
+        padding: 12px;
+    }
+
+    .jsonContainer {
+        max-height: calc(100vh - 350px);
+        min-height: 350px;
+        border-radius: 8px;
+    }
+
+    .jsonContent,
+    .jsonEditor {
+        padding: 16px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .jsonControls {
+        flex-direction: column;
+        gap: 8px;
+
+        button {
+            width: 100%;
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .jsonContainer {
+        min-height: 300px;
+    }
+
+    .jsonContent,
+    .jsonEditor {
+        font-size: 12px;
+        padding: 12px;
     }
 }

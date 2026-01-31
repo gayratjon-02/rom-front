@@ -746,6 +746,11 @@ function Home() {
             isGenerating={isGenerating}
             isAnalyzed={isAnalyzed}
             hasDA={hasDA}
+            // NEW: Generate Images props
+            hasMergedPrompts={!!generationResponse?.merged_prompts}
+            onGenerateImages={handleGenerateImages}
+            isGeneratingImages={isGenerating && !!generationResponse?.merged_prompts} // Only spin if we have prompts
+            generatingProgress={progress}
           />
         </div>
       </div>
